@@ -23,4 +23,4 @@ Ce dossier contient le code source de tous les programmes développés en `Java`
 
 Institut Supérieur Industriel Liégeois (ISIL) - Département ingénieurs industriels
 
-[Mawet Xavier](www.nakim.be) © 2014-2015. All rights reserved.
+[Mawet Xavier](http://www.nakim.be) © 2014-2015. All rights reserved.
