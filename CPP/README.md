@@ -34,4 +34,10 @@ La base de données est simulée par un simple fichier texte `users.conf`, dans 
 Ce fichier doit être placé dans un répertoire `DB/` qui, lui même, doit être placé dans le **même répertoire que l'exécutable**.
 
 ###Fichiers (non) chiffrés récupérables par les clients
-Le **ClientDocuments** peut récupérer des fichiers texte non chiffrés ou chiffrés. Ces derniers sont placés respectivement dans les répertoires `PLAIN/` et `CIPHER/` qui, eux même, doivent être placés dans le **même répertoire que l'exécutable**. 
+Le **ClientDocuments** peut récupérer des fichiers texte non chiffrés ou chiffrés. Ces derniers sont placés respectivement dans les répertoires `PLAIN/` et `CIPHER/` qui, eux même, doivent être placés dans le **même répertoire que l'exécutable**.
+
+##Copyright
+
+Institut Supérieur Industriel Liégeois (ISIL) - Département ingénieurs industriels
+
+[Mawet Xavier](http://www.nakim.be) © 2014-2015. All rights reserved.
