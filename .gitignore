@@ -1,3 +1,5 @@
 *.user
 *.pri
 build*/
+/Java/MyLittleCheapLibrary/nbproject/private/
+/Java/MyLittleCheapLibrary/dist/
