@@ -1,4 +1,4 @@
-package Main;
+package SecureDocumentsGeneratorMain;
 
 import GUI.MainFrame;
 import java.util.logging.Level;
