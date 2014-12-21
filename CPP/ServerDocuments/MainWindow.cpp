@@ -46,7 +46,7 @@ void MainWindow::on_pushButtonStart_clicked()
         return;
     }
 
-    this->_threadServeur = new ThreadServeur(this->ui->spinBoxPort->value(), 0);
+    this->_threadServeur = new ThreadServer(this->ui->spinBoxPort->value(), 0);
 
     connect(this->_threadServeur, SIGNAL(message(QString)), this, SLOT(displayMessage(QString)));
     connect(this->_threadServeur, SIGNAL(serverRunning(bool)), this, SLOT(setWidgetsEnable(bool)));

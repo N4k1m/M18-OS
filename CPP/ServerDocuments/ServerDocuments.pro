@@ -13,7 +13,7 @@ INCLUDEPATH += .
 CONFIG += c++11
 
 # Input
-HEADERS += MainWindow.hpp ThreadServeur.hpp \
+HEADERS += MainWindow.hpp \
     ../Utils/Sockets/Socket.hpp \
     ../Utils/Sockets/SocketException.hpp \
     ../Utils/Sockets/SocketServer.hpp \
@@ -23,9 +23,10 @@ HEADERS += MainWindow.hpp ThreadServeur.hpp \
     ../Utils/Hash/Hash.hpp \
     ../Utils/Hash/RandomPrimeGenerator.hpp \
     ../Utils/Parser/IniParser.hpp \
-    ../Utils/Exceptions/Exception.hpp
+    ../Utils/Exceptions/Exception.hpp \
+    ThreadServer.hpp
 FORMS += MainWindow.ui
-SOURCES += main.cpp MainWindow.cpp ThreadServeur.cpp \
+SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Sockets/Socket.cpp \
     ../Utils/Sockets/SocketException.cpp \
     ../Utils/Sockets/SocketServer.cpp \
@@ -35,7 +36,8 @@ SOURCES += main.cpp MainWindow.cpp ThreadServeur.cpp \
     ../Utils/Hash/Hash.cpp \
     ../Utils/Hash/RandomPrimeGenerator.cpp \
     ../Utils/Parser/IniParser.cpp \
-    ../Utils/Exceptions/Exception.cpp
+    ../Utils/Exceptions/Exception.cpp \
+    ThreadServer.cpp
 
 DISTFILES += \
     server_documents.conf \

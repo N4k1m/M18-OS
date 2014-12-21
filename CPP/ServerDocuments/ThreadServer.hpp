@@ -17,14 +17,14 @@
 // Parser
 #include "../Utils/Parser/IniParser.hpp"
 
-class ThreadServeur : public QThread
+class ThreadServer : public QThread
 {
         Q_OBJECT
 
     public:
 
-        explicit ThreadServeur(int port, QObject *parent = 0);
-        ~ThreadServeur(void);
+        explicit ThreadServer(int port, QObject *parent = 0);
+        ~ThreadServer(void);
 
     signals:
 

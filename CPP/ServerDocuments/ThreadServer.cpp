@@ -1,6 +1,6 @@
-#include "ThreadServeur.hpp"
+#include "ThreadServer.hpp"
 
-ThreadServeur::ThreadServeur(int port, QObject *parent) :
+ThreadServer::ThreadServer(int port, QObject *parent) :
     QThread(parent), protocolManager("#", "=", "!"), primeGenerator(),
     _port(port), server_socket(NULL), client_socket(NULL), client_connected(false)
 {
@@ -18,7 +18,7 @@ ThreadServeur::ThreadServeur(int port, QObject *parent) :
     primeGenerator.init_fast(1000000);
 }
 
-ThreadServeur::~ThreadServeur(void)
+ThreadServer::~ThreadServer(void)
 {
     emit message("Free resources");
     emit serverRunning(false);
@@ -27,7 +27,7 @@ ThreadServeur::~ThreadServeur(void)
     delete this->server_socket;
 }
 
-void ThreadServeur::run()
+void ThreadServer::run()
 {
     // Create serveur socket
     this->server_socket = new TCPSocketServer(_port);
@@ -88,7 +88,7 @@ void ThreadServeur::run()
     emit message("Thread server end");
 }
 
-void ThreadServeur::manageLOGIN(void)
+void ThreadServer::manageLOGIN(void)
 {
     // Get all users login - password
     IniParser usersParser("DB/users.conf");
@@ -169,7 +169,7 @@ void ThreadServeur::manageLOGIN(void)
     client_socket->send(protocolManager.generateQuery());
 }
 
-void ThreadServeur::manageGETPLAIN(void)
+void ThreadServer::manageGETPLAIN(void)
 {
     // Check if client is successfully connected
     if (!client_connected)
@@ -217,7 +217,7 @@ void ThreadServeur::manageGETPLAIN(void)
     client_socket->send(protocolManager.generateQuery());
 }
 
-void ThreadServeur::manageGETCIPHER(void)
+void ThreadServer::manageGETCIPHER(void)
 {
     // Check if client is successfully connected
     if (!client_connected)
@@ -265,7 +265,7 @@ void ThreadServeur::manageGETCIPHER(void)
     client_socket->send(protocolManager.generateQuery());
 }
 
-void ThreadServeur::sendFAILMessage(const std::string& cause)
+void ThreadServer::sendFAILMessage(const std::string& cause)
 {
     protocolManager.clearHeaders();
     protocolManager.setCommand(GDOCP::FAIL);

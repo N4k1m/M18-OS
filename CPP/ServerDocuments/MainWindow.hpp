@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include <QFileDialog>
-#include "ThreadServeur.hpp"
+#include "ThreadServer.hpp"
 
 // Parser (configuration file)
 #include "../Utils/Parser/IniParser.hpp"
@@ -34,7 +34,7 @@ class MainWindow : public QWidget
     private:
 
         Ui::MainWindow *ui;
-        ThreadServeur* _threadServeur;
+        ThreadServer* _threadServeur;
 };
 
 #endif // MAINWINDOW_HPP
