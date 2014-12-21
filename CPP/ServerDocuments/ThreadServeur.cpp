@@ -197,6 +197,7 @@ void ThreadServeur::manageGETPLAIN(void)
         infile.close();
         sendFAILMessage("File \"" + filename + "\" doesn't exist");
         emit message("File \"" + QString::fromStdString(filename) + "\" doesn't exist");
+        return;
     }
 
     emit message("File exists");
@@ -244,6 +245,7 @@ void ThreadServeur::manageGETCIPHER(void)
         infile.close();
         sendFAILMessage("File \"" + filename + "\" doesn't exist");
         emit message("File \"" + QString::fromStdString(filename) + "\" doesn't exist");
+        return;
     }
 
     emit message("File exists");
