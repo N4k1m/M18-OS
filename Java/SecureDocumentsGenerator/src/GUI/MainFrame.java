@@ -1,16 +1,25 @@
 package GUI;
 
+import MyLittleCheapLibrary.CIAManager;
+import SPF.Authentication.Authentication;
+import SPF.Cle;
+import SPF.Crypto.Chiffrement;
+import SPF.Integrity.Integrity;
 import Threads.ThServer;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.awt.event.ItemEvent;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.Properties;
 import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JFileChooser;
 import javax.swing.SpinnerListModel;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
  *
@@ -139,6 +148,82 @@ public class MainFrame extends javax.swing.JFrame
             this.buttonStartStop.setText("Stop");
         }
     }
+
+    private synchronized void generateCipherKey(String provider)
+    {
+        // Get new cipher if provider is different
+        if (this.chiffrement == null ||
+            !this.chiffrement.getProvider().equals(provider))
+        {
+            System.out.println("[ OK ] Chiffrement " + provider + " recupere");
+            this.chiffrement = CIAManager.getChiffrement(provider);
+        }
+
+        // Generate key
+        this.cle = this.chiffrement.genererCle(
+            (int)this.spinnerCipherKeyLength.getValue());
+        System.out.println("[ OK ] Cle " + provider + " generee");
+
+        this.serializeKey();
+    }
+
+    private synchronized void serializeKey()
+    {
+        if (this.cle == null)
+            return;
+
+        // Demande de la destination où sauvegarder la clé
+        JFileChooser chooser = new JFileChooser(System.getProperty("user.documents"));
+        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("SER FILES", "ser");
+        chooser.removeChoosableFileFilter(chooser.getAcceptAllFileFilter());
+        chooser.setFileFilter(filter);
+
+        int option = chooser.showSaveDialog(this);
+        if (option != JFileChooser.APPROVE_OPTION)
+        {
+            System.out.println("[FAIL] Sauvegarde annulee, cle non enregistree.");
+            return;
+        }
+
+        String fileName = chooser.getSelectedFile().getAbsolutePath();
+        if (!fileName.endsWith(".ser"))
+            fileName += ".ser";
+
+        System.out.println("[ OK ] Destination : " + fileName);
+
+        try
+        {
+            // ouverture d'un flux de sortie vers le fichier
+            final FileOutputStream fos = new FileOutputStream(fileName);
+            // création d'un "flux objet" avec le flux fichier
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+
+            try
+            {
+                // sérialisation : écriture de l'objet dans le flux de sortie
+                oos.writeObject(this.cle);
+                oos.flush();
+
+                System.out.println("[ OK ] Cle serialisee ...");
+            }
+            finally
+            {
+                try
+                {
+                    oos.close();
+                }
+                finally
+                {
+                    fos.close();
+                }
+            }
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
+    }
     //</editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -255,6 +340,13 @@ public class MainFrame extends javax.swing.JFrame
         panelGenerateCipherKey.add(spinnerCipherKeyLength, gridBagConstraints);
 
         buttonGenerateCipherKey.setText("Generate and save");
+        buttonGenerateCipherKey.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonGenerateCipherKeyActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 2;
@@ -354,6 +446,18 @@ public class MainFrame extends javax.swing.JFrame
             }
         }
     }//GEN-LAST:event_comboBoxCipherProvidersItemStateChanged
+
+    private void buttonGenerateCipherKeyActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateCipherKeyActionPerformed
+    {//GEN-HEADEREND:event_buttonGenerateCipherKeyActionPerformed
+        System.out.println("[ OK ] Debut d'une nouvelle generation de cle de cryptage ...");
+
+        String provider = (String)this.comboBoxCipherProviders.getSelectedItem();
+
+        if (provider == null || provider.isEmpty())
+            return;
+
+        this.generateCipherKey(provider); // Synchronized
+    }//GEN-LAST:event_buttonGenerateCipherKeyActionPerformed
     //</editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Widgets">
@@ -393,7 +497,6 @@ public class MainFrame extends javax.swing.JFrame
     private ThServer thServer;
 
     // Models
-    // Models
     private SpinnerNumberModel defaultSpinnerModel;
     private SpinnerListModel DESkeyLengthSpinnerModel;
     private SpinnerListModel AESKeyLengthSpinnerModel;
@@ -401,6 +504,11 @@ public class MainFrame extends javax.swing.JFrame
     private ComboBoxModel cipherProvidersModel;
     private ComboBoxModel authenticationProvidersModels;
     private ComboBoxModel algorithmModel;
+
+    private Chiffrement chiffrement;
+    private Cle cle;
+    private Integrity integrity;
+    private Authentication authentication;
 
     // </editor-fold>
 
