@@ -4,8 +4,13 @@ import Threads.ThServer;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
+import java.awt.event.ItemEvent;
 import java.io.IOException;
 import java.util.Properties;
+import javax.swing.ComboBoxModel;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.SpinnerListModel;
+import javax.swing.SpinnerNumberModel;
 
 /**
  *
@@ -21,6 +26,9 @@ public class MainFrame extends javax.swing.JFrame
         // Redirect the system output to a TextArea
         TextAreaOutputStream toas = TextAreaOutputStream.getInstance(
             this.textAreaOutput);
+
+        // Create ComboBoxes and Spinners models
+        this.createModels();
 
         // Load properties file
         try
@@ -52,6 +60,36 @@ public class MainFrame extends javax.swing.JFrame
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Private methods">
+    private void createModels()
+    {
+        // Create spinner models to limit key length
+        this.defaultSpinnerModel = new SpinnerNumberModel(5, 0, 100, 1);
+
+        // Create spinner model for DES key length
+        this.DESkeyLengthSpinnerModel = new SpinnerListModel(new Integer[]{64});
+
+        // Create spinner model for AES key length
+        this.AESKeyLengthSpinnerModel = new SpinnerListModel(
+            new Integer[]{128, 192, 256});
+
+        this.cipherProvidersModel = new DefaultComboBoxModel(
+            new String[] {"AlbertiFamily", "Triumvirat",
+                          "ProCrypto", "CryptoCBCAESProvider"});
+
+        this.authenticationProvidersModels = new DefaultComboBoxModel(
+            new String[]{"HMACSHA1MawetProvider"});
+
+        this.algorithmModel = new DefaultComboBoxModel(
+            new String[] {"DES", "AES"});
+
+        // Apply models to widgets
+        this.comboBoxCipherProviders.setModel(this.cipherProvidersModel);
+        this.comboBoxAuthenticationProviders.setModel(
+            this.authenticationProvidersModels);
+        this.comboBoxAlgorithms.setModel(this.algorithmModel);
+        this.spinnerCipherKeyLength.setModel(this.defaultSpinnerModel);
+    }
+
     private void startServer()
     {
         // Start thread
@@ -191,6 +229,14 @@ public class MainFrame extends javax.swing.JFrame
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.1;
         panelGenerateCipherKey.add(labelCipherProvider, gridBagConstraints);
+
+        comboBoxCipherProviders.addItemListener(new java.awt.event.ItemListener()
+        {
+            public void itemStateChanged(java.awt.event.ItemEvent evt)
+            {
+                comboBoxCipherProvidersItemStateChanged(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.2;
@@ -283,6 +329,31 @@ public class MainFrame extends javax.swing.JFrame
     {//GEN-HEADEREND:event_buttonClearActionPerformed
         this.textAreaOutput.setText(null);
     }//GEN-LAST:event_buttonClearActionPerformed
+
+    private void comboBoxCipherProvidersItemStateChanged(java.awt.event.ItemEvent evt)//GEN-FIRST:event_comboBoxCipherProvidersItemStateChanged
+    {//GEN-HEADEREND:event_comboBoxCipherProvidersItemStateChanged
+        if (evt.getStateChange() == ItemEvent.SELECTED)
+        {
+            int index = this.comboBoxCipherProviders.getSelectedIndex();
+
+            switch(index)
+            {
+                case 0: // Alberti
+                case 1: // Cesar
+                    this.spinnerCipherKeyLength.setModel(
+                        this.defaultSpinnerModel);
+                    break;
+                case 2: // DES
+                    this.spinnerCipherKeyLength.setModel(
+                        this.DESkeyLengthSpinnerModel);
+                    break;
+                case 3: // AES
+                    this.spinnerCipherKeyLength.setModel(
+                        this.AESKeyLengthSpinnerModel);
+                    break;
+            }
+        }
+    }//GEN-LAST:event_comboBoxCipherProvidersItemStateChanged
     //</editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Widgets">
@@ -320,6 +391,17 @@ public class MainFrame extends javax.swing.JFrame
     private Properties prop;
     private boolean isRunning;
     private ThServer thServer;
+
+    // Models
+    // Models
+    private SpinnerNumberModel defaultSpinnerModel;
+    private SpinnerListModel DESkeyLengthSpinnerModel;
+    private SpinnerListModel AESKeyLengthSpinnerModel;
+
+    private ComboBoxModel cipherProvidersModel;
+    private ComboBoxModel authenticationProvidersModels;
+    private ComboBoxModel algorithmModel;
+
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Static variable">
