@@ -3,6 +3,7 @@ package GUI;
 import Threads.ThServer;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
+import java.awt.Color;
 import java.io.IOException;
 import java.util.Properties;
 
@@ -39,14 +40,14 @@ public class MainFrame extends javax.swing.JFrame
                 new Integer(this.prop.getProperty("port_server", DEFAULT_PORT)));
 
             System.out.println("[ OK ] Parametres de configuration charges");
-
-            this.isRunning = false;
-            System.out.println("[ OK ] Serveur a l'arret");
         }
         catch (IOException ex)
         {
             System.err.println(ex);
         }
+
+        this.isRunning = false;
+        this.showStatus();
     }
     //</editor-fold>
 
@@ -58,9 +59,8 @@ public class MainFrame extends javax.swing.JFrame
         this.thServer = new ThServer(this, port);
         this.thServer.start();
 
-        this.spinnerPort.setEnabled(false);
-        this.buttonStartStop.setText("Stop");
-        this.isRunning = true;
+        this.isRunning = !(this.thServer == null || !this.thServer.isAlive());
+        this.showStatus();
     }
 
     private void stopServer()
@@ -73,15 +73,33 @@ public class MainFrame extends javax.swing.JFrame
             // Stop thread
             this.thServer.requestStop();
             this.thServer.join();
+            this.thServer = null;
         }
         catch (IOException | InterruptedException ex)
         {
             System.err.println(ex);
         }
 
-        this.spinnerPort.setEnabled(true);
-        this.buttonStartStop.setText("Start");
-        this.isRunning = false;
+        this.isRunning = !(this.thServer == null || !this.thServer.isAlive());
+        this.showStatus();
+    }
+
+    private void showStatus()
+    {
+        this.spinnerPort.setEnabled(!this.isRunning);
+
+        if (!this.isRunning)
+        {
+            this.labelStatus.setForeground(Color.RED);
+            this.labelStatus.setText("Server stopped");
+            this.buttonStartStop.setText("Start");
+        }
+        else
+        {
+            this.labelStatus.setForeground(Color.GREEN);
+            this.labelStatus.setText("Server is running");
+            this.buttonStartStop.setText("Stop");
+        }
     }
     //</editor-fold>
 
