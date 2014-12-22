@@ -75,7 +75,7 @@ public class ThServer extends Thread
                         if (!isFileExists(textsFolderPath + query.getFileName()))
                         {
                             reply.setCommand("GET_DOCUMENT_FAIL");
-                            reply.addArg("Document " + query.getFileName() + " inexistante");
+                            reply.addArg("Document " + query.getFileName() + " inexistant");
                             reply.send(socketClient);
                             continue;
                         }
