@@ -1,7 +1,6 @@
 package SecureDocumentsGeneratorMain;
 
 import GUI.MainFrame;
-import GUI.MainFrame2;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -25,19 +24,18 @@ public class Main
             System.err.println(ex);
         }
         //</editor-fold>
-        
-        //MainFrame mainFrame = new MainFrame("Secure Documents Generator");
-        MainFrame2 mainFrame = new MainFrame2();
+
+        MainFrame mainFrame = new MainFrame();
         mainFrame.setVisible(true);
     }
-    
+
     public static String getLookAndFeelClassName(String nameSnippet)
     {
         UIManager.LookAndFeelInfo[] plafs = UIManager.getInstalledLookAndFeels();
         for(UIManager.LookAndFeelInfo info : plafs)
             if (info.getName().contains(nameSnippet))
                 return info.getClassName();
-        
+
         return null;
     }
 }

@@ -3,41 +3,25 @@ package GUI;
 import Threads.ThServer;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
-import java.awt.BorderLayout;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.HeadlessException;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.util.Properties;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
-import javax.swing.JTextArea;
-import javax.swing.SpinnerNumberModel;
 
 /**
  *
- * @author nakim
+ * @author Nakim
  */
-public class MainFrame extends JFrame
-                       implements ActionListener
+public class MainFrame extends javax.swing.JFrame
 {
     //<editor-fold defaultstate="collapsed" desc="Constructor">
-    public MainFrame(String title) throws HeadlessException
+    public MainFrame()
     {
-        super(title);
         this.initComponents();
-        
+
         // Redirect the system output to a TextArea
         TextAreaOutputStream toas = TextAreaOutputStream.getInstance(
             this.textAreaOutput);
-        
-        // Load properties file        
+
+        // Load properties file
         try
         {
             String path = System.getProperty("user.dir");
@@ -47,15 +31,15 @@ public class MainFrame extends JFrame
                     + "GUI"
                     + System.getProperty("file.separator")
                     + "config.properties";
-        
+
             this.prop = PropertyLoader.load(path);
-            
+
             // Set the default port server
             this.spinnerPort.setValue(
                 new Integer(this.prop.getProperty("port_server", DEFAULT_PORT)));
-            
+
             System.out.println("[ OK ] Parametres de configuration charges");
-            
+
             this.isRunning = false;
             System.out.println("[ OK ] Serveur a l'arret");
         }
@@ -64,55 +48,8 @@ public class MainFrame extends JFrame
             System.err.println(ex);
         }
     }
-    
-    private void initComponents()
-    {
-        // Configure main frame
-        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        this.setLayout(new BorderLayout(10, 10));
-        
-        Container mainFrameContainer = this.getContentPane();
-        
-        // Header widgets
-        this.labelProt = new JLabel("Listening port : ");
-        this.labelProt.setHorizontalAlignment(JLabel.CENTER);
-        
-        this.spinnerModel = new SpinnerNumberModel();
-        this.spinnerModel.setMinimum(0);
-        this.spinnerModel.setStepSize(1);
-        
-        this.spinnerPort = new JSpinner(this.spinnerModel);
-        this.spinnerPort.setPreferredSize(new Dimension(100, 28));
-        
-        this.buttonStartStop = new JButton("Start");
-        this.buttonStartStop.addActionListener(this);
-        
-        // Header panel
-        this.panelHeader = new JPanel();
-        this.panelHeader.add(this.labelProt);
-        this.panelHeader.add(this.spinnerPort);
-        this.panelHeader.add(this.buttonStartStop);
-        
-        // Body
-        this.textAreaOutput = new JTextArea();
-        this.scrollPaneBody = new JScrollPane(this.textAreaOutput);
-        
-        // Footer
-        this.buttonClear = new JButton("Clear");
-        this.buttonClear.addActionListener(this);
-        
-        // Populate main frame
-        mainFrameContainer.add(this.panelHeader, BorderLayout.PAGE_START);
-        mainFrameContainer.add(this.scrollPaneBody, BorderLayout.CENTER);
-        mainFrameContainer.add(this.buttonClear, BorderLayout.PAGE_END);
-        this.setSize(new Dimension(400, 450));
-        //pack();
-        
-        // Center frame
-        this.setLocationRelativeTo(null);
-    }
     //</editor-fold>
-    
+
     //<editor-fold defaultstate="collapsed" desc="Private methods">
     private void startServer()
     {
@@ -120,14 +57,17 @@ public class MainFrame extends JFrame
         int port = (int)this.spinnerPort.getValue();
         this.thServer = new ThServer(this, port);
         this.thServer.start();
-        
+
         this.spinnerPort.setEnabled(false);
         this.buttonStartStop.setText("Stop");
         this.isRunning = true;
     }
-    
+
     private void stopServer()
     {
+        if (this.thServer == null)
+            return;
+
         try
         {
             // Stop thread
@@ -138,58 +78,235 @@ public class MainFrame extends JFrame
         {
             System.err.println(ex);
         }
-        
+
         this.spinnerPort.setEnabled(true);
         this.buttonStartStop.setText("Start");
         this.isRunning = false;
     }
     //</editor-fold>
-    
-    //<editor-fold defaultstate="collapsed" desc="Events management">
-    @Override
-    public void actionPerformed(ActionEvent actionEvent)
+
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents()
     {
-        if (actionEvent.getSource() == this.buttonStartStop)
+        java.awt.GridBagConstraints gridBagConstraints;
+
+        panelHeader = new javax.swing.JPanel();
+        buttonStartStop = new javax.swing.JButton();
+        panelHeaderBody = new javax.swing.JPanel();
+        labelStatusTitle = new javax.swing.JLabel();
+        labelStatus = new javax.swing.JLabel();
+        labelPort = new javax.swing.JLabel();
+        spinnerPort = new javax.swing.JSpinner();
+        buttonClear = new javax.swing.JButton();
+        splitPane = new javax.swing.JSplitPane();
+        scrollPane = new javax.swing.JScrollPane();
+        textAreaOutput = new javax.swing.JTextArea();
+        tabbedPane = new javax.swing.JTabbedPane();
+        panelGenerateCipherKey = new javax.swing.JPanel();
+        labelCipherProvider = new javax.swing.JLabel();
+        comboBoxCipherProviders = new javax.swing.JComboBox();
+        labelCipherKeyLength = new javax.swing.JLabel();
+        spinnerCipherKeyLength = new javax.swing.JSpinner();
+        buttonGenerateCipherKey = new javax.swing.JButton();
+        panelGenerateAuthenticationKey = new javax.swing.JPanel();
+        labelAuthenticationProvider = new javax.swing.JLabel();
+        comboBoxAuthenticationProviders = new javax.swing.JComboBox();
+        labelAlgorithm = new javax.swing.JLabel();
+        comboBoxAlgorithms = new javax.swing.JComboBox();
+        labelSecretMessage = new javax.swing.JLabel();
+        textFieldSecretMessage = new javax.swing.JTextField();
+        buttonGenerateAuthenticationKey = new javax.swing.JButton();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Secure Documents Generator");
+
+        panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panelHeader.setLayout(new java.awt.BorderLayout(10, 0));
+
+        buttonStartStop.setText("Start");
+        buttonStartStop.addActionListener(new java.awt.event.ActionListener()
         {
-            if (this.isRunning)
-                this.stopServer();
-            else
-                this.startServer();
-        }
-        else if (actionEvent.getSource() == this.buttonClear)
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonStartStopActionPerformed(evt);
+            }
+        });
+        panelHeader.add(buttonStartStop, java.awt.BorderLayout.LINE_END);
+
+        panelHeaderBody.setLayout(new java.awt.GridLayout(2, 2));
+
+        labelStatusTitle.setText("Status :");
+        panelHeaderBody.add(labelStatusTitle);
+
+        labelStatus.setText("<status>");
+        panelHeaderBody.add(labelStatus);
+
+        labelPort.setText("Listening port :");
+        panelHeaderBody.add(labelPort);
+        panelHeaderBody.add(spinnerPort);
+
+        panelHeader.add(panelHeaderBody, java.awt.BorderLayout.CENTER);
+
+        getContentPane().add(panelHeader, java.awt.BorderLayout.PAGE_START);
+
+        buttonClear.setText("Clear");
+        buttonClear.addActionListener(new java.awt.event.ActionListener()
         {
-            this.textAreaOutput.setText(null);
-        }
-    }
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonClearActionPerformed(evt);
+            }
+        });
+        getContentPane().add(buttonClear, java.awt.BorderLayout.PAGE_END);
+
+        splitPane.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
+
+        scrollPane.setViewportView(textAreaOutput);
+
+        splitPane.setBottomComponent(scrollPane);
+
+        panelGenerateCipherKey.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panelGenerateCipherKey.setLayout(new java.awt.GridBagLayout());
+
+        labelCipherProvider.setText("Cipher provider :");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
+        panelGenerateCipherKey.add(labelCipherProvider, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.2;
+        panelGenerateCipherKey.add(comboBoxCipherProviders, gridBagConstraints);
+
+        labelCipherKeyLength.setText("Cipher key length :");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateCipherKey.add(labelCipherKeyLength, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateCipherKey.add(spinnerCipherKeyLength, gridBagConstraints);
+
+        buttonGenerateCipherKey.setText("Generate and save");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateCipherKey.add(buttonGenerateCipherKey, gridBagConstraints);
+
+        tabbedPane.addTab("Generate cipher key", panelGenerateCipherKey);
+
+        panelGenerateAuthenticationKey.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panelGenerateAuthenticationKey.setLayout(new java.awt.GridBagLayout());
+
+        labelAuthenticationProvider.setText("Authentication provider :");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
+        panelGenerateAuthenticationKey.add(labelAuthenticationProvider, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.2;
+        panelGenerateAuthenticationKey.add(comboBoxAuthenticationProviders, gridBagConstraints);
+
+        labelAlgorithm.setText("Algorithm :");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateAuthenticationKey.add(labelAlgorithm, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateAuthenticationKey.add(comboBoxAlgorithms, gridBagConstraints);
+
+        labelSecretMessage.setText("Secret message :");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateAuthenticationKey.add(labelSecretMessage, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateAuthenticationKey.add(textFieldSecretMessage, gridBagConstraints);
+
+        buttonGenerateAuthenticationKey.setText("Generate and save");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 3;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelGenerateAuthenticationKey.add(buttonGenerateAuthenticationKey, gridBagConstraints);
+
+        tabbedPane.addTab("Generate authentication key", panelGenerateAuthenticationKey);
+
+        splitPane.setLeftComponent(tabbedPane);
+
+        getContentPane().add(splitPane, java.awt.BorderLayout.CENTER);
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    //<editor-fold defaultstate="collapsed" desc="Events management">
+    private void buttonStartStopActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonStartStopActionPerformed
+    {//GEN-HEADEREND:event_buttonStartStopActionPerformed
+        if(this.isRunning)
+            this.stopServer();
+        else
+            this.startServer();
+    }//GEN-LAST:event_buttonStartStopActionPerformed
+
+    private void buttonClearActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonClearActionPerformed
+    {//GEN-HEADEREND:event_buttonClearActionPerformed
+        this.textAreaOutput.setText(null);
+    }//GEN-LAST:event_buttonClearActionPerformed
     //</editor-fold>
-    
-    //<editor-fold defaultstate="collapsed" desc="Private child Widgets">
-    
-    // Header Widgets
-    private JLabel labelProt;
-    private JSpinner spinnerPort;
-    private SpinnerNumberModel spinnerModel;
-    private JButton buttonStartStop;
-    private JPanel panelHeader;
-    
-    // Body Widgets
-    private JScrollPane scrollPaneBody;
-    private JTextArea textAreaOutput;
-    
-    // Footer Widget
-    private JButton buttonClear;
-        
-    //</editor-fold>
-    
-    // <editor-fold defaultstate="collapsed" desc=" Private variables ">
+
+    // <editor-fold defaultstate="collapsed" desc="Widgets">
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton buttonClear;
+    private javax.swing.JButton buttonGenerateAuthenticationKey;
+    private javax.swing.JButton buttonGenerateCipherKey;
+    private javax.swing.JButton buttonStartStop;
+    private javax.swing.JComboBox comboBoxAlgorithms;
+    private javax.swing.JComboBox comboBoxAuthenticationProviders;
+    private javax.swing.JComboBox comboBoxCipherProviders;
+    private javax.swing.JLabel labelAlgorithm;
+    private javax.swing.JLabel labelAuthenticationProvider;
+    private javax.swing.JLabel labelCipherKeyLength;
+    private javax.swing.JLabel labelCipherProvider;
+    private javax.swing.JLabel labelPort;
+    private javax.swing.JLabel labelSecretMessage;
+    private javax.swing.JLabel labelStatus;
+    private javax.swing.JLabel labelStatusTitle;
+    private javax.swing.JPanel panelGenerateAuthenticationKey;
+    private javax.swing.JPanel panelGenerateCipherKey;
+    private javax.swing.JPanel panelHeader;
+    private javax.swing.JPanel panelHeaderBody;
+    private javax.swing.JScrollPane scrollPane;
+    private javax.swing.JSpinner spinnerCipherKeyLength;
+    private javax.swing.JSpinner spinnerPort;
+    private javax.swing.JSplitPane splitPane;
+    private javax.swing.JTabbedPane tabbedPane;
+    private javax.swing.JTextArea textAreaOutput;
+    private javax.swing.JTextField textFieldSecretMessage;
+    // End of variables declaration//GEN-END:variables
+    // </editor-fold>
+
+    // <editor-fold defaultstate="collapsed" desc="Private variables">
     private Properties prop;
     private boolean isRunning;
     private ThServer thServer;
     // </editor-fold>
-    
-    // <editor-fold defaultstate="collapsed" desc=" Static variable ">
+
+    // <editor-fold defaultstate="collapsed" desc="Static variable">
     private static final String DEFAULT_PORT;
-    
+
     static
     {
         DEFAULT_PORT = "40000";
