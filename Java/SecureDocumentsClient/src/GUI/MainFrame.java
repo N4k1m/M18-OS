@@ -29,14 +29,14 @@ public class MainFrame extends javax.swing.JFrame
     public MainFrame()
     {
         this.initComponents();
-        
+
         // Redirect the system output to a TextArea
         TextAreaOutputStream toas =
             TextAreaOutputStream.getInstance(this.textAreaOutput);
-        
+
         this.sock = null;
-        
-        // Load properties file        
+
+        // Load properties file
         try
         {
             String path = System.getProperty("user.dir");
@@ -46,60 +46,60 @@ public class MainFrame extends javax.swing.JFrame
                     + "GUI"
                     + System.getProperty("file.separator")
                     + "config.properties";
-        
+
             this.prop = PropertyLoader.load(path);
-            
+
             // Set the default ip server
             this.textFieldIPServer.setText(
                 this.prop.getProperty("ip_server", DEFAULT_IP));
-            
+
             // Set the default port server
             this.spinnerPortServer.setValue(
                 new Integer(this.prop.getProperty("port_server", DEFAULT_PORT)));
-            
+
             System.out.println("[ OK ] Parametres de configuration charges");
         }
         catch (IOException ex)
         {
             System.err.println(ex);
         }
-        
+
         // Creates models
         this.createModels();
-        
+
         // Hide tab
         this.disconnectFromServer();
-        
+
         // Center frame
         this.setLocationRelativeTo(null);
     }
     //</editor-fold>
-    
+
     //<editor-fold defaultstate="collapsed" desc="Private methods">
     private void createModels()
-    {            
+    {
         this.chiffrementProvidersModel = new DefaultComboBoxModel(
             new String[] {"AlbertiFamily", "Triumvirat", "ProCrypto", "CryptoCBCAESProvider"});
-        
+
         this.AuthenticationProvidersModels = new DefaultComboBoxModel(
             new String[]{"HMACSHA1MawetProvider"});
-        
+
         this.IntegrityProvidersModel = new DefaultComboBoxModel(
             new String[]{"SHA1MawetProvider"});
-        
+
         // Application des modèles aux widgets
         this.comboBoxCipherProviders.setModel(this.chiffrementProvidersModel);
         this.comboBoxAuthenticationProviders.setModel(this.AuthenticationProvidersModels);
         this.comboBoxIntegrityProviders.setModel(this.IntegrityProvidersModel);
     }
-    
+
     private void getCleFromFile(String keyname)
     {
         try
         {
             final FileInputStream fis = new FileInputStream(keysFolderPath + keyname);
             ObjectInputStream ois = new ObjectInputStream(fis);
-            
+
             try
             {
                 this.cle = (Cle) ois.readObject();
@@ -123,17 +123,17 @@ public class MainFrame extends javax.swing.JFrame
             this.cle = null;
         }
     }
-    
+
     private void connectToServer()
     {
         if (this.sock != null)
             this.disconnectFromServer();
-        
+
         int port = (int)this.spinnerPortServer.getValue();
         String ip = this.textFieldIPServer.getText();
-        System.out.println("[ OK ] Tentative de connexion au serveur " + 
+        System.out.println("[ OK ] Tentative de connexion au serveur " +
                            ip + ":" + port);
-        
+
         try
         {
             this.sock = new Socket(ip, port);
@@ -148,24 +148,24 @@ public class MainFrame extends javax.swing.JFrame
             System.out.println("[FAIL] Impossible de se connecter");
             return;
         }
-        
+
         System.out.println("[ OK ] Connexion etablie");
-        
+
         this.buttonConnect.setText("Déconnexion");
         this.isConnected = true;
     }
-    
+
     private void disconnectFromServer()
     {
         this.buttonConnect.setText("Conexion");
         this.isConnected = false;
-        
+
         if (this.sock == null)
         {
             System.out.println("[ OK ] Vous n'etes pas connecte au serveur");
             return;
         }
-        
+
         try
         {
             this.sock.close();
@@ -395,21 +395,18 @@ public class MainFrame extends javax.swing.JFrame
 
     private void buttonGetDocumentActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGetDocumentActionPerformed
     {//GEN-HEADEREND:event_buttonGetDocumentActionPerformed
-        if (this.sock == null || !this.sock.isConnected())
-        {
-            System.out.println("[FAIL] Vous n'etes pas connecte au serveur");
-            return;
-        }
-        
         try
         {
+            if (this.sock == null || !this.sock.isConnected())
+                throw new Exception("Vous n'etes pas connecte au serveur");
+
             if (this.textFieldDocumentName.getText().isEmpty())
                 throw new Exception("Vous devez renseigner un nom de fichier");
-            
+
             if (this.checkBoxEncrypt.isSelected() &&
                 this.textFieldCipherKeyName.getText().isEmpty())
                 throw new Exception("Vous devez renseigner le nom de la cle utilisee pour chiffrer");
-            
+
             if (this.checkBoxAuthentication.isSelected() &&
                 this.textFieldAuthenticationKeyName.getText().isEmpty())
                 throw new Exception("Vous devez renseigner le nom de la cle utilisee pour authentifier");
@@ -420,13 +417,13 @@ public class MainFrame extends javax.swing.JFrame
             MessageBoxes.ShowError(e.getMessage(), "Données manquantes");
             return;
         }
-        
+
         System.out.println("[ OK ] Construction de la requete...");
         Request reply, requ = new Request("GET_DOCUMENT");
-        
+
         // Ajout du nom du fichier
         requ.addArg(this.textFieldDocumentName.getText());
-        
+
         // Ajout des flags des paramètres
         requ.addArg(BytesConverter.toByteArray(
             this.checkBoxEncrypt.isSelected()));
@@ -434,35 +431,35 @@ public class MainFrame extends javax.swing.JFrame
             this.checkBoxAuthentication.isSelected()));
         requ.addArg(BytesConverter.toByteArray(
             this.checkBoxIntegrity.isSelected()));
-        
+
         // Ajout du provider de chiffrement et du nom de la clé
         if (this.checkBoxEncrypt.isSelected())
         {
             requ.addArg((String)this.comboBoxCipherProviders.getSelectedItem());
             requ.addArg(this.textFieldCipherKeyName.getText());
         }
-        
+
         // Ajout du provider de Authentification et du nom de la clé
         if (this.checkBoxAuthentication.isSelected())
         {
             requ.addArg((String)this.comboBoxAuthenticationProviders.getSelectedItem());
             requ.addArg(this.textFieldAuthenticationKeyName.getText());
         }
-        
+
         // Ajout du provider Integrity
         if (this.checkBoxIntegrity.isSelected())
         {
             requ.addArg((String)this.comboBoxIntegrityProviders.getSelectedItem());
         }
-        
+
         reply = requ.sendAndRecv(this.sock);
-        
+
         if (reply.getCommand().compareToIgnoreCase("GET_DOCUMENT_ACK") == 0)
         {
             int currentIndex = 0;
             String content = reply.getStringArg(currentIndex);
             System.out.println("[ RQ ] Texte recu : " + content);
-            
+
             // décryptage du text
             if (this.checkBoxEncrypt.isSelected())
             {
@@ -470,11 +467,11 @@ public class MainFrame extends javax.swing.JFrame
                     (String)this.comboBoxCipherProviders.getSelectedItem());
                 this.getCleFromFile(this.textFieldCipherKeyName.getText());
                 this.chiffrement.init(this.cle);
-                
+
                 content = this.chiffrement.decrypte(content);
                 System.out.println("[ RQ ] Texte decrypte : " + content);
             }
-            
+
             // Vérification de l'authentification
             if (this.checkBoxAuthentication.isSelected())
             {
@@ -483,19 +480,19 @@ public class MainFrame extends javax.swing.JFrame
                     (String)this.comboBoxAuthenticationProviders.getSelectedItem());
                 this.getCleFromFile(this.textFieldAuthenticationKeyName.getText());
                 this.authentication.init(this.cle);
-                
+
                 if (this.authentication.verifyAuthenticate(content, hmac))
                     System.out.println("[ RQ ] Authentification valide");
                 else
                     System.out.println("[FAIL] Authentification non valide");
             }
-            
+
             if (this.checkBoxIntegrity.isSelected())
             {
                 byte[] hash = reply.getArg(++currentIndex);
                 this.integrity = CIAManager.getIntegrity(
                     (String)this.comboBoxIntegrityProviders.getSelectedItem());
-                
+
                 if (this.integrity.verifyCheck(content, hash))
                     System.out.println("[ RQ ] Integrite valide");
                 else
@@ -548,17 +545,17 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JTextField textFieldIPServer;
     // End of variables declaration//GEN-END:variables
     // </editor-fold>
-    
+
     // <editor-fold defaultstate="collapsed" desc="Private variables">
     private Properties prop;
     private Socket sock;
     private boolean isConnected;
-    
+
     // Models
     private ComboBoxModel chiffrementProvidersModel;
     private ComboBoxModel IntegrityProvidersModel;
     private ComboBoxModel AuthenticationProvidersModels;
-    
+
     private Cle cle;
     private Chiffrement chiffrement;
     private Integrity integrity;
@@ -569,7 +566,7 @@ public class MainFrame extends javax.swing.JFrame
     private static final String DEFAULT_IP;
     private static final String DEFAULT_PORT;
     private static final String keysFolderPath;
-    
+
     static
     {
         DEFAULT_IP   = "127.0.0.1";
