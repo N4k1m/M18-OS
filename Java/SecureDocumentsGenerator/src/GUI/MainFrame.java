@@ -2,10 +2,12 @@ package GUI;
 
 import MyLittleCheapLibrary.CIAManager;
 import SPF.Authentication.Authentication;
+import SPF.ByteArrayList;
 import SPF.Cle;
 import SPF.Crypto.Chiffrement;
 import SPF.Integrity.Integrity;
 import Threads.ThServer;
+import Utils.MessageBoxes;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
@@ -155,14 +157,53 @@ public class MainFrame extends javax.swing.JFrame
         if (this.chiffrement == null ||
             !this.chiffrement.getProvider().equals(provider))
         {
+            try
+            {
+                this.chiffrement = CIAManager.getChiffrement(provider);
+            }
+            catch (IllegalArgumentException e)
+            {
+                MessageBoxes.ShowError(e.getMessage(), "Erreur génération de clé");
+                return;
+            }
+
             System.out.println("[ OK ] Chiffrement " + provider + " recupere");
-            this.chiffrement = CIAManager.getChiffrement(provider);
         }
 
         // Generate key
         this.cle = this.chiffrement.genererCle(
             (int)this.spinnerCipherKeyLength.getValue());
         System.out.println("[ OK ] Cle " + provider + " generee");
+
+        this.serializeKey();
+    }
+
+    private synchronized void generateAuthenticationKey(
+        String provider, String algorithm, String secretMessage)
+    {
+        // Get new Authentication if provider is different
+        if(this.authentication == null ||
+           !this.authentication.getProvider().equals(provider))
+        {
+            try
+            {
+                this.authentication = CIAManager.getAuthentication(provider);
+            }
+            catch (IllegalArgumentException e)
+            {
+                MessageBoxes.ShowError(e.getMessage(), "Erreur génération de clé");
+                return;
+            }
+
+            System.out.println("[ OK ] Authentification " + provider + " recupere");
+        }
+
+        ByteArrayList secretBytes = new ByteArrayList();
+        secretBytes.add(secretMessage.getBytes());
+
+        // Generate key
+        this.cle = this.authentication.generateKey(secretBytes, algorithm);
+        System.out.println("[ OK ] Cle " + provider + " generee avec " + algorithm);
 
         this.serializeKey();
     }
@@ -393,6 +434,13 @@ public class MainFrame extends javax.swing.JFrame
         panelGenerateAuthenticationKey.add(textFieldSecretMessage, gridBagConstraints);
 
         buttonGenerateAuthenticationKey.setText("Generate and save");
+        buttonGenerateAuthenticationKey.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonGenerateAuthenticationKeyActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 3;
@@ -449,15 +497,53 @@ public class MainFrame extends javax.swing.JFrame
 
     private void buttonGenerateCipherKeyActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateCipherKeyActionPerformed
     {//GEN-HEADEREND:event_buttonGenerateCipherKeyActionPerformed
-        System.out.println("[ OK ] Debut d'une nouvelle generation de cle de cryptage ...");
+        try
+        {
+            // Get provider
+            String provider = (String)this.comboBoxCipherProviders.getSelectedItem();
+            if (provider == null || provider.isEmpty())
+                throw new Exception("Vous devez choisir un provider");
 
-        String provider = (String)this.comboBoxCipherProviders.getSelectedItem();
+            System.out.println("[ OK ] Debut d'une nouvelle generation de cle de cryptage ...");
 
-        if (provider == null || provider.isEmpty())
-            return;
-
-        this.generateCipherKey(provider); // Synchronized
+            this.generateCipherKey(provider); // Synchronized
+        }
+        catch (Exception e)
+        {
+            MessageBoxes.ShowError(e.getMessage(),
+                                   "Impossible de générer la clé");
+        }
     }//GEN-LAST:event_buttonGenerateCipherKeyActionPerformed
+
+    private void buttonGenerateAuthenticationKeyActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateAuthenticationKeyActionPerformed
+    {//GEN-HEADEREND:event_buttonGenerateAuthenticationKeyActionPerformed
+        try
+        {
+            // Get secret
+            String secret = this.textFieldSecretMessage.getText();
+            if(secret == null || secret.isEmpty())
+                throw new Exception("Vous devez renseigner un message secret");
+
+            // Get provider
+            String provider = (String)this.comboBoxAuthenticationProviders.getSelectedItem();
+            if (provider == null || provider.isEmpty())
+                throw new Exception("Vous devez choisir un provider");
+
+            // Get algorithm
+            String algorithm = (String)this.comboBoxAlgorithms.getSelectedItem();
+            if (algorithm == null || algorithm.isEmpty())
+                throw new Exception("Vous devez choisir un algorithme");
+
+            System.out.println("[ OK ] Debut d'une nouvelle generation de cle d'authentification ...");
+
+            this.generateAuthenticationKey(provider, algorithm, secret);
+        }
+        catch (Exception e)
+        {
+            MessageBoxes.ShowError(e.getMessage(),
+                                   "Impossible de générer la clé");
+        }
+    }//GEN-LAST:event_buttonGenerateAuthenticationKeyActionPerformed
     //</editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Widgets">
