@@ -505,6 +505,11 @@ public class MainFrame extends javax.swing.JFrame
             System.out.println("[FAIL] " + cause);
             MessageBoxes.ShowError(cause, "Erreur de requête");
         }
+        else if (reply.getCommand().equalsIgnoreCase("NO_COMMAND"))
+        {
+            this.disconnectFromServer();
+            MessageBoxes.ShowError("Vous avez été déconnecté du serveur", "Déconnexion du serveur");
+        }
     }//GEN-LAST:event_buttonGetDocumentActionPerformed
 
     private void buttonClearActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonClearActionPerformed
