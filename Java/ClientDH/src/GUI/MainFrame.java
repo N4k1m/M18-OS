@@ -1,12 +1,21 @@
 package GUI;
 
+import Utils.MessageBoxes;
 import Utils.PropertyLoader;
+import Utils.Request;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -20,6 +29,11 @@ public class MainFrame extends javax.swing.JFrame
     public MainFrame()
     {
         this.initComponents();
+
+        this.sockV1 = null;
+        this.secretKeyV1 = null;
+        this.interpreterProperties = null;
+        this.isConnectedV1 = false;
 
         // Redirect the system output to a TextArea
         TextAreaOutputStream toas = TextAreaOutputStream.getInstance(
@@ -60,6 +74,12 @@ public class MainFrame extends javax.swing.JFrame
         // Create models
         this.createModels();
 
+        // "Open bible"
+        this.openBible();
+
+        // Create cipher
+        this.createCiphers();
+
         this.showStatusV1();
     }
     //</editor-fold>
@@ -78,16 +98,54 @@ public class MainFrame extends javax.swing.JFrame
                     + System.getProperty("file.separator")
                     + "interpreter.properties";
 
-            this.propInterpreter = PropertyLoader.load(path);
+            this.interpreterProperties = PropertyLoader.load(path);
 
             // Get all messages
             this.messagesModelV1 = new DefaultComboBoxModel(
-                this.propInterpreter.keySet().toArray());
+                this.interpreterProperties.keySet().toArray());
             this.comboBoxMessageV1.setModel(this.messagesModelV1);
         }
         catch (IOException ex)
         {
             System.err.println(ex);
+        }
+    }
+
+    private void openBible()
+    {
+        // Load properties file
+        try
+        {
+            String path = System.getProperty("user.dir");
+            path += System.getProperty("file.separator")
+                    + "src"
+                    + System.getProperty("file.separator")
+                    + "GUI"
+                    + System.getProperty("file.separator")
+                    + "bible.properties";
+
+            this.bibleProperties = PropertyLoader.load(path);
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
+    }
+
+    private void createCiphers()
+    {
+        try
+        {
+            this.encryptCipherV1 = Cipher.getInstance(
+                algorithm + "/" + cipherMode + "/" + padding);
+            this.decryptCipherV1 = Cipher.getInstance(
+                algorithm + "/" + cipherMode + "/" + padding);
+        }
+        catch (NoSuchAlgorithmException | NoSuchPaddingException ex)
+        {
+            this.encryptCipherV1 = null;
+            this.decryptCipherV1 = null;
+            System.out.println("[FAIL] Unable to create ciphers : " + ex.getMessage());
         }
     }
 
@@ -130,6 +188,7 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.sockV1.close();
             this.sockV1 = null;
+            this.secretKeyV1 = null;
         }
         catch (Exception ex)
         {
@@ -162,6 +221,67 @@ public class MainFrame extends javax.swing.JFrame
             this.labelStatusV1.setForeground(Color.RED);
             this.labelStatusV1.setText("Disconnected");
             this.buttonConnectV1.setText("Connect");
+        }
+    }
+
+    private void generateSecretKeyV1()
+    {
+        System.out.println("[ V1 ] Generate new secret key");
+
+        try
+        {
+            // Check if client is connected
+            if (this.sockV1 == null || !this.sockV1.isConnected())
+                throw new Exception("You are disconnected from server");
+
+            // Check if ciphers exist
+            if (this.encryptCipherV1 == null || this.decryptCipherV1 == null)
+                throw new Exception("No cipher objects available");
+
+            /* Get bible line number before sending a query to be shure that
+             * the line number is the same for the server and the client if
+             * the network communication is too slow */
+            String minute = new SimpleDateFormat("mm").format(new Date());
+            int bibleLineNumber = Integer.parseInt(minute) % 10;
+
+            // Send a GENERATE_KEY request
+            Request query = new Request("GENERATE_KEY");
+            Request reply = query.sendAndRecv(this.sockV1);
+
+            // If client has been disconected
+            if (reply.is("NO_COMMAND"))
+            {
+                this.disconnectFromServerV1();
+                throw new Exception("Disconnected from server");
+            }
+
+            if (reply.is("GENERATE_KEY_FAIL"))
+                throw new Exception(reply.getStringArg(0));
+
+            if (!reply.is("GENERATE_KEY_ACK"))
+                throw new Exception("Invalid reply : " + reply.getCommand());
+
+            // Get bible line at "bibleLineNumber"
+            String bibleLine = this.bibleProperties.getProperty(
+                Integer.toString(bibleLineNumber));
+            System.out.println("[ V1 ] bible line " + bibleLineNumber
+                + " = " + bibleLine);
+
+            // generate new secret key
+            this.secretKeyV1 = new SecretKeySpec(
+                bibleLine.substring(bibleLineNumber,
+                                    bibleLineNumber + 8).getBytes(), algorithm);
+
+            // initialize ciphers
+            this.encryptCipherV1.init(Cipher.ENCRYPT_MODE, this.secretKeyV1);
+            this.decryptCipherV1.init(Cipher.DECRYPT_MODE, this.secretKeyV1);
+
+            System.out.println("[ V1 ] New secret key generated");
+        }
+        catch (Exception e)
+        {
+            System.out.println("[ V1 ] " + e.getMessage());
+            MessageBoxes.ShowError(e.getMessage(), "Error generating secret key");
         }
     }
     //</editor-fold>
@@ -267,6 +387,13 @@ public class MainFrame extends javax.swing.JFrame
         panelBodyV1.setLayout(new java.awt.GridBagLayout());
 
         buttonGenerateKeyV1.setText("Generate new key");
+        buttonGenerateKeyV1.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonGenerateKeyV1ActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 2;
@@ -275,6 +402,13 @@ public class MainFrame extends javax.swing.JFrame
         panelBodyV1.add(buttonGenerateKeyV1, gridBagConstraints);
 
         buttonSendMessageV1.setText("Send message");
+        buttonSendMessageV1.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonSendMessageV1ActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 2;
@@ -381,6 +515,71 @@ public class MainFrame extends javax.swing.JFrame
     {//GEN-HEADEREND:event_buttonClearActionPerformed
         this.textAreaOutput.setText(null);
     }//GEN-LAST:event_buttonClearActionPerformed
+
+    private void buttonSendMessageV1ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonSendMessageV1ActionPerformed
+    {//GEN-HEADEREND:event_buttonSendMessageV1ActionPerformed
+        try
+        {
+            // Check if client is connected
+            if (this.sockV1 == null || !this.sockV1.isConnected())
+                throw new Exception("You are disconnected from server");
+
+            // Check if ciphers exist
+            if (this.encryptCipherV1 == null || this.decryptCipherV1 == null)
+                throw new Exception("No cipher objects available");
+
+            // Check if secretKey and ciphers exist
+            if (this.secretKeyV1 == null)
+                throw new Exception("A new secret key must be generated");
+
+            // Get coded message
+            String codedMessage = (String)this.comboBoxMessageV1.getSelectedItem();
+            if (codedMessage == null || codedMessage.isEmpty())
+                throw new Exception("Unable to send empty message");
+
+            // Encrypt coded message
+            byte[] cipherTextByteArray = this.encryptCipherV1.doFinal(codedMessage.getBytes());
+
+            // Send new MESSAGE query
+            Request query = new Request("MESSAGE");
+            query.addArg(cipherTextByteArray);
+            System.out.println("[ V1 ] Encrypted message sent");
+            Request reply = query.sendAndRecv(this.sockV1);
+
+            // If client has been disconected
+            if (reply.is("NO_COMMAND"))
+            {
+                this.disconnectFromServerV1();
+                throw new Exception("Disconnected from server");
+            }
+
+            // If query failed
+            if (reply.is("MESSAGE_FAIL"))
+                throw new Exception("Server error : " + reply.getStringArg(0));
+
+            if (!reply.is("MESSAGE_ACK"))
+                throw new Exception("Invalid reply : " + reply.getCommand());
+
+            // Get encoded message
+            System.out.println("[ V1 ] Received reply");
+            cipherTextByteArray = reply.getArg(0);
+            codedMessage = new String(this.decryptCipherV1.doFinal(cipherTextByteArray));
+
+            System.out.println("[ V1 ] Decrypted message : " + codedMessage);
+            System.out.println("[ V1 ] Real message is : " +
+                this.interpreterProperties.getProperty(codedMessage, "UNKNOW"));
+        }
+        catch (Exception e)
+        {
+            System.out.println("[ V1 ] " + e.getMessage());
+            MessageBoxes.ShowError(e.getMessage(), "Error sending message");
+        }
+    }//GEN-LAST:event_buttonSendMessageV1ActionPerformed
+
+    private void buttonGenerateKeyV1ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateKeyV1ActionPerformed
+    {//GEN-HEADEREND:event_buttonGenerateKeyV1ActionPerformed
+        this.generateSecretKeyV1();
+    }//GEN-LAST:event_buttonGenerateKeyV1ActionPerformed
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Main">
@@ -453,9 +652,17 @@ public class MainFrame extends javax.swing.JFrame
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Private variables">
-    private Properties propInterpreter;
+    private Properties interpreterProperties;
+    private Properties bibleProperties;
+
+    // Version 1
     private Socket sockV1;
     private boolean isConnectedV1;
+    private SecretKey secretKeyV1;
+    private Cipher encryptCipherV1;
+    private Cipher decryptCipherV1;
+
+    // Version 2
 
     // Models
     private DefaultComboBoxModel messagesModelV1;
@@ -467,12 +674,20 @@ public class MainFrame extends javax.swing.JFrame
     private static final String DEFAULT_IP_V2;
     private static final String DEFAULT_PORT_V2;
 
+    private static final String algorithm;
+    private static final String cipherMode;
+    private static final String padding;
+
     static
     {
         DEFAULT_IP_V1   = "127.0.0.1";
         DEFAULT_PORT_V1 = "40000";
         DEFAULT_IP_V2   = "127.0.0.1";
         DEFAULT_PORT_V2 = "40001";
+
+        algorithm  = "DES";
+        cipherMode = "ECB";
+        padding    = "PKCS5Padding";
     }
     // </editor-fold>
 }

@@ -1,9 +1,22 @@
 package Threads;
 
+import Utils.PropertyLoader;
 import Utils.Request;
+import Utils.ReturnValue;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import java.util.Random;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  *
@@ -18,6 +31,12 @@ public class ThreadServerV1 extends Thread
         this.stopRequested = false;
         this.socketServer = null;
         this.socketClient = null;
+        this.secretKey = null;
+        this.rand = new Random();
+
+        this.openBible();
+        this.openIterpreter();
+        this.createCiphers();
     }
     //</editor-fold>
 
@@ -33,7 +52,7 @@ public class ThreadServerV1 extends Thread
         catch (IOException ex)
         {
             System.err.println(ex);
-            System.exit(1);
+            System.exit(ReturnValue.FAILURE.getReturnCode());
         }
 
         // Main loop
@@ -41,9 +60,10 @@ public class ThreadServerV1 extends Thread
         {
             try
             {
+                this.clientStop = false;
+                this.secretKey  = null;
                 System.out.println("[ V1 ] Waiting client");
                 this.socketClient = this.socketServer.accept();
-                this.clientStop = false;
                 System.out.println("[ V1 ] New client connected");
             }
             catch (IOException ex)
@@ -55,14 +75,26 @@ public class ThreadServerV1 extends Thread
             while (!this.clientStop)
             {
                 this.query = Request.recv(this.socketClient);
-                System.out.println("[ V1 ] Query received : " + query.getCommand());
+                System.out.println("[ V1 ] Query received : " +
+                    this.query.getCommand());
 
                 switch(this.query.getCommand())
                 {
                     case Request.SOCK_ERROR:
                     case Request.NO_COMMAND:
                         this.clientStop = true;
+                        System.out.println("[ V1 ] Interrupted. Stop receiving message");
+                        break;
                     case "MESSAGE":
+                        this.manageMessage();
+                        break;
+                    case "GENERATE_KEY":
+                        this.generateSecretKey();
+                        break;
+                    default:
+                        System.out.println("[ V1 ] Invalid query : "
+                            + this.query.getCommand());
+                        break;
                 }
             }
         }
@@ -70,9 +102,143 @@ public class ThreadServerV1 extends Thread
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Private methods">
+    private void openBible()
+    {
+        // Load properties file
+        try
+        {
+            String path = System.getProperty("user.dir");
+            path += System.getProperty("file.separator")
+                    + "src"
+                    + System.getProperty("file.separator")
+                    + "GUI"
+                    + System.getProperty("file.separator")
+                    + "bible.properties";
+
+            this.bibleProperties = PropertyLoader.load(path);
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
+    }
+
+    private void openIterpreter()
+    {
+        // Load properties file
+        try
+        {
+            String path = System.getProperty("user.dir");
+            path += System.getProperty("file.separator")
+                    + "src"
+                    + System.getProperty("file.separator")
+                    + "GUI"
+                    + System.getProperty("file.separator")
+                    + "interpreter.properties";
+
+            this.interpreterProperties = PropertyLoader.load(path);
+
+            this.codedSentences = new ArrayList<>();
+            this.interpreterProperties.keySet().stream().forEach((sentence) ->
+            {
+                this.codedSentences.add((String)sentence);
+            });
+
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
+    }
+
+     private void createCiphers()
+    {
+        try
+        {
+            this.encryptCipher = Cipher.getInstance(
+                algorithm + "/" + cipherMode + "/" + padding);
+            this.decryptCipher = Cipher.getInstance(
+                algorithm + "/" + cipherMode + "/" + padding);
+        }
+        catch (NoSuchAlgorithmException | NoSuchPaddingException ex)
+        {
+            this.encryptCipher = null;
+            this.decryptCipher = null;
+            System.out.println("[FAIL] Unable to create ciphers : " + ex.getMessage());
+        }
+    }
+
     private void manageMessage()
     {
-        System.out.println("[ V1 ] manage message");
+        System.out.println("[ V1 ] Encrypted message received");
+
+        try
+        {
+            if (this.secretKey == null)
+                throw new Exception("A new secret key must be generated");
+
+            byte[] cipherTextByteArray = this.query.getArg(0);
+            String codedMessage = new String(this.decryptCipher.doFinal(cipherTextByteArray));
+            System.out.println("[ V1 ] Decrypted message : " + codedMessage);
+
+            System.out.println("[ V1 ] Real message is : " +
+                this.interpreterProperties.getProperty(codedMessage, "UNKNOW"));
+
+            // Reply : logic should be here instead of random
+            int random = this.rand.nextInt(this.codedSentences.size());
+            codedMessage = this.codedSentences.get(random);
+
+            // Build reply query
+            Request reply = new Request("MESSAGE_ACK");
+            reply.addArg(this.encryptCipher.doFinal(codedMessage.getBytes()));
+            reply.send(this.socketClient);
+
+            System.out.println("[ V1 ] Encrypted message sent (reply)");
+        }
+        catch (Exception ex)
+        {
+            System.out.println("[FAIL] " + ex.getMessage());
+            Request.quickSend("MESSAGE_FAIL", ex.getMessage(), this.socketClient);
+        }
+    }
+
+    private void generateSecretKey()
+    {
+        System.out.println("[ V1 ] Generate new secret key");
+
+        try
+        {
+            if (this.encryptCipher == null || this.decryptCipher == null)
+                throw new Exception("No cipher objects available");
+
+            // Get bible line number
+            String minute = new SimpleDateFormat("mm").format(new Date());
+            int bibleLineNumber = Integer.parseInt(minute) % 10;
+
+            // Get bible line at "bibleLineNumber"
+            String bibleLine = this.bibleProperties.getProperty(
+                Integer.toString(bibleLineNumber));
+            System.out.println("[ V1 ] bible line " + bibleLineNumber
+                + " = " + bibleLine);
+
+            // generate new secret key
+            this.secretKey = new SecretKeySpec(
+                bibleLine.substring(bibleLineNumber,
+                                    bibleLineNumber + 8).getBytes(), algorithm);
+
+            // initialize ciphers
+            this.encryptCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
+            this.decryptCipher.init(Cipher.DECRYPT_MODE, this.secretKey);
+
+            System.out.println("[ V1 ] New secret key generated");
+
+            Request.quickSend("GENERATE_KEY_ACK", this.socketClient);
+        }
+        catch (Exception e)
+        {
+            System.out.println("[ V1 ] " + e.getMessage());
+            Request.quickSend("GENERATE_KEY_FAIL", e.getMessage(), this.socketClient);
+        }
     }
     //</editor-fold>
 
@@ -92,10 +258,32 @@ public class ThreadServerV1 extends Thread
     private final int port_server;
     private boolean stopRequested;
     private boolean clientStop;
+    private Random rand;
+
+    private List<String> codedSentences;
+    private Properties interpreterProperties;
+    private Properties bibleProperties;
+
+    private Cipher encryptCipher;
+    private Cipher decryptCipher;
+    private SecretKey secretKey;
 
     private Request query;
 
     private ServerSocket socketServer;
     private Socket socketClient;
+    // </editor-fold>
+
+    // <editor-fold defaultstate="collapsed" desc="Static variables">
+    private static final String algorithm;
+    private static final String cipherMode;
+    private static final String padding;
+
+    static
+    {
+        algorithm  = "DES";
+        cipherMode = "ECB";
+        padding    = "PKCS5Padding";
+    }
     // </editor-fold>
 }
