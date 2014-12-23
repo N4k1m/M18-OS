@@ -1,5 +1,10 @@
 package GUI;
 
+import Utils.PropertyLoader;
+import Utils.TextAreaOutputStream;
+import java.io.IOException;
+import java.util.Properties;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.UnsupportedLookAndFeelException;
 
 /**
@@ -11,7 +16,34 @@ public class MainFrame extends javax.swing.JFrame
     //<editor-fold defaultstate="collapsed" desc="Constructor">
     public MainFrame()
     {
-        initComponents();
+        this.initComponents();
+
+        // Redirect the system output to a TextArea
+        TextAreaOutputStream toas = TextAreaOutputStream.getInstance(
+            this.textAreaOutput);
+
+        // Load properties file
+        try
+        {
+            String path = System.getProperty("user.dir");
+            path += System.getProperty("file.separator")
+                    + "src"
+                    + System.getProperty("file.separator")
+                    + "GUI"
+                    + System.getProperty("file.separator")
+                    + "interpreter.properties";
+
+            this.prop = PropertyLoader.load(path);
+
+            // Get all messages
+            this.messagesModelV1 = new DefaultComboBoxModel(
+                this.prop.keySet().toArray());
+            this.comboBoxMessageV1.setModel(this.messagesModelV1);
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
     }
     //</editor-fold>
 
@@ -36,9 +68,10 @@ public class MainFrame extends javax.swing.JFrame
         labelPortV1 = new javax.swing.JLabel();
         spinnerPortV1 = new javax.swing.JSpinner();
         panelBodyV1 = new javax.swing.JPanel();
-        textFieldMessageV1 = new javax.swing.JTextField();
         buttonGenerateKeyV1 = new javax.swing.JButton();
         buttonSendMessageV1 = new javax.swing.JButton();
+        comboBoxMessageV1 = new javax.swing.JComboBox();
+        labelMessageV1 = new javax.swing.JLabel();
         panelV2 = new javax.swing.JPanel();
         panelHeaderV2 = new javax.swing.JPanel();
         buttonConnectV2 = new javax.swing.JButton();
@@ -98,18 +131,11 @@ public class MainFrame extends javax.swing.JFrame
         panelV1.add(panelHeaderV1, java.awt.BorderLayout.PAGE_START);
 
         panelBodyV1.setLayout(new java.awt.GridBagLayout());
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.gridwidth = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.2;
-        panelBodyV1.add(textFieldMessageV1, gridBagConstraints);
 
         buttonGenerateKeyV1.setText("Generate new key");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.1;
         panelBodyV1.add(buttonGenerateKeyV1, gridBagConstraints);
@@ -117,10 +143,26 @@ public class MainFrame extends javax.swing.JFrame
         buttonSendMessageV1.setText("Send message");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.1;
         panelBodyV1.add(buttonSendMessageV1, gridBagConstraints);
+
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.2;
+        panelBodyV1.add(comboBoxMessageV1, gridBagConstraints);
+
+        labelMessageV1.setText("Message : ");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelBodyV1.add(labelMessageV1, gridBagConstraints);
 
         panelV1.add(panelBodyV1, java.awt.BorderLayout.CENTER);
 
@@ -231,8 +273,10 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JButton buttonGenerateKeyV2;
     private javax.swing.JButton buttonSendMessageV1;
     private javax.swing.JButton buttonSendMessageV2;
+    private javax.swing.JComboBox comboBoxMessageV1;
     private javax.swing.JLabel labelIPV1;
     private javax.swing.JLabel labelIPV2;
+    private javax.swing.JLabel labelMessageV1;
     private javax.swing.JLabel labelPortV1;
     private javax.swing.JLabel labelPortV2;
     private javax.swing.JLabel labelStatusInfoV1;
@@ -255,8 +299,14 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JTextArea textAreaOutput;
     private javax.swing.JTextField textFieldIPV1;
     private javax.swing.JTextField textFieldIPV2;
-    private javax.swing.JTextField textFieldMessageV1;
     private javax.swing.JTextField textFieldMessageV2;
     // End of variables declaration//GEN-END:variables
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Private variables">
+    private Properties prop;
+
+    // Models
+    private DefaultComboBoxModel messagesModelV1;
     //</editor-fold>
 }
