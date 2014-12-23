@@ -472,7 +472,7 @@ public class MainFrame extends javax.swing.JFrame
         DEFAULT_IP_V1   = "127.0.0.1";
         DEFAULT_PORT_V1 = "40000";
         DEFAULT_IP_V2   = "127.0.0.1";
-        DEFAULT_PORT_V2 = "40000";
+        DEFAULT_PORT_V2 = "40001";
     }
     // </editor-fold>
 }
