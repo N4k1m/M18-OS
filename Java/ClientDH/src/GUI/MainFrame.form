@@ -3,6 +3,7 @@
 <Form version="1.5" maxVersion="1.9" type="org.netbeans.modules.form.forminfo.JFrameFormInfo">
   <Properties>
     <Property name="defaultCloseOperation" type="int" value="3"/>
+    <Property name="title" type="java.lang.String" value="Client Diffie Hellman"/>
   </Properties>
   <SyntheticProperties>
     <SyntheticProperty name="formSizePolicy" type="int" value="1"/>
@@ -27,6 +28,9 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="Clear"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="buttonClearActionPerformed"/>
+      </Events>
       <Constraints>
         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout" value="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout$BorderConstraintsDescription">
           <BorderConstraints direction="Last"/>
@@ -103,8 +107,11 @@
                   <SubComponents>
                     <Component class="javax.swing.JButton" name="buttonConnectV1">
                       <Properties>
-                        <Property name="text" type="java.lang.String" value="Connect"/>
+                        <Property name="text" type="java.lang.String" value="&lt;state&gt;"/>
                       </Properties>
+                      <Events>
+                        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="buttonConnectV1ActionPerformed"/>
+                      </Events>
                       <Constraints>
                         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout" value="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout$BorderConstraintsDescription">
                           <BorderConstraints direction="After"/>
@@ -138,14 +145,14 @@
                             <Property name="text" type="java.lang.String" value="IP address :"/>
                           </Properties>
                         </Component>
-                        <Component class="javax.swing.JTextField" name="textFieldIPV1">
+                        <Component class="javax.swing.JTextField" name="textFieldIPServerV1">
                         </Component>
                         <Component class="javax.swing.JLabel" name="labelPortV1">
                           <Properties>
                             <Property name="text" type="java.lang.String" value="Port : "/>
                           </Properties>
                         </Component>
-                        <Component class="javax.swing.JSpinner" name="spinnerPortV1">
+                        <Component class="javax.swing.JSpinner" name="spinnerPortServerV1">
                           <Properties>
                             <Property name="model" type="javax.swing.SpinnerModel" editor="org.netbeans.modules.form.editors2.SpinnerModelEditor">
                               <SpinnerModel initial="0" minimum="0" numberType="java.lang.Integer" stepSize="1" type="number"/>
@@ -240,7 +247,7 @@
                   <SubComponents>
                     <Component class="javax.swing.JButton" name="buttonConnectV2">
                       <Properties>
-                        <Property name="text" type="java.lang.String" value="Connect"/>
+                        <Property name="text" type="java.lang.String" value="&lt;state&gt;"/>
                       </Properties>
                       <Constraints>
                         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout" value="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout$BorderConstraintsDescription">
@@ -275,14 +282,14 @@
                             <Property name="text" type="java.lang.String" value="IP address :"/>
                           </Properties>
                         </Component>
-                        <Component class="javax.swing.JTextField" name="textFieldIPV2">
+                        <Component class="javax.swing.JTextField" name="textFieldIPServerV2">
                         </Component>
                         <Component class="javax.swing.JLabel" name="labelPortV2">
                           <Properties>
                             <Property name="text" type="java.lang.String" value="Port : "/>
                           </Properties>
                         </Component>
-                        <Component class="javax.swing.JSpinner" name="spinnerPortV2">
+                        <Component class="javax.swing.JSpinner" name="spinnerPortServerV2">
                           <Properties>
                             <Property name="model" type="javax.swing.SpinnerModel" editor="org.netbeans.modules.form.editors2.SpinnerModelEditor">
                               <SpinnerModel initial="0" minimum="0" numberType="java.lang.Integer" stepSize="1" type="number"/>

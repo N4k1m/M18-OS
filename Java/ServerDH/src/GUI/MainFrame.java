@@ -38,10 +38,11 @@ public class MainFrame extends javax.swing.JFrame
 
             // Set the default port servers
             this.spinnerPortV1.setValue(
-                new Integer(this.prop.getProperty("port_server_v1", DEFAULT_PORT_V1)));
-            // Set the default port servers
+                new Integer(this.prop.getProperty(
+                    "port_server_v1", DEFAULT_PORT_V1)));
             this.spinnerPortV2.setValue(
-                new Integer(this.prop.getProperty("port_server_v2", DEFAULT_PORT_V2)));
+                new Integer(this.prop.getProperty(
+                    "port_server_v2", DEFAULT_PORT_V2)));
 
             System.out.println("[ OK ] Configuration settings : loaded");
         }
@@ -98,17 +99,17 @@ public class MainFrame extends javax.swing.JFrame
 
         this.spinnerPortV1.setEnabled(!this.isRunningV1);
 
-        if (!this.isRunningV1)
-        {
-            this.labelStatusV1.setForeground(Color.RED);
-            this.labelStatusV1.setText("Server stopped");
-            this.buttonStartStopV1.setText("Start");
-        }
-        else
+        if (this.isRunningV1)
         {
             this.labelStatusV1.setForeground(Color.GREEN);
             this.labelStatusV1.setText("Server is running");
             this.buttonStartStopV1.setText("Stop");
+        }
+        else
+        {
+            this.labelStatusV1.setForeground(Color.RED);
+            this.labelStatusV1.setText("Server stopped");
+            this.buttonStartStopV1.setText("Start");
         }
     }
     //</editor-fold>
@@ -137,6 +138,7 @@ public class MainFrame extends javax.swing.JFrame
         buttonStartStopV2 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Server Diffie Hellman");
 
         buttonClear.setText("Clear");
         buttonClear.addActionListener(new java.awt.event.ActionListener()

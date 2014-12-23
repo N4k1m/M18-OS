@@ -18,7 +18,6 @@ public class ThreadServerV1 extends Thread
         this.stopRequested = false;
         this.socketServer = null;
         this.socketClient = null;
-        this.clientStop = false;
     }
     //</editor-fold>
 
@@ -44,6 +43,8 @@ public class ThreadServerV1 extends Thread
             {
                 System.out.println("[ V1 ] Waiting client");
                 this.socketClient = this.socketServer.accept();
+                this.clientStop = false;
+                System.out.println("[ V1 ] New client connected");
             }
             catch (IOException ex)
             {
