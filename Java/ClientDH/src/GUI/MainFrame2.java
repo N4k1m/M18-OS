@@ -9,9 +9,22 @@ import java.awt.Color;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.AlgorithmParameterGenerator;
+import java.security.AlgorithmParameters;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
+import javax.crypto.KeyAgreement;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
 
@@ -216,6 +229,149 @@ public class MainFrame2 extends javax.swing.JFrame
             this.showStatus();
         }
     }
+
+    private void generateSecretKeyV1()
+    {
+        System.out.println("[ V1 ] Generate new secret key");
+
+        try
+        {
+            // check if client is connected
+            if (this.sock == null || !this.sock.isConnected())
+                throw new Exception("You are disconnected from server");
+
+            // Check if crypter exists
+            if (this.symmetricCrypter == null)
+                throw new Exception("No crypter object available");
+
+            /* Get bible line number before sending a query to be shure that
+             * the line number is the same for the server and the client if
+             * the network communication is too slow */
+            String minute = new SimpleDateFormat("mm").format(new Date());
+            int bibleLineNumber = Integer.parseInt(minute) % 10;
+
+            // Send a GENERATE_KEY_V1 query
+            Request query = new Request("GENERATE_KEY_V1");
+            Request reply = query.sendAndRecv(this.sock);
+
+            // If client has been disconnected
+            if (reply.is(Request.NO_COMMAND) || reply.is(Request.SOCK_ERROR))
+            {
+                this.disconnectFromServer();
+                throw new Exception("Disconnected from server");
+            }
+
+            // If query failed
+            if (reply.is("GENERATE_KEY_V1_FAIL"))
+                throw new Exception("Server error : " + reply.getStringArg(0));
+
+            // Unknown command
+            if (!reply.is("GENERATE_KEY_V1_ACK"))
+                throw new Exception("Invalid reply : " + reply.getCommand());
+
+            // Get bible line at "bibleLineNumber"
+            String bibleLine = this.bibleProperties.getProperty(
+                Integer.toString(bibleLineNumber));
+            System.out.println("[ V1 ] bible line " + bibleLineNumber
+                + " = " + bibleLine);
+
+            // generate new secret key
+            SecretKey newSecretKey = new SecretKeySpec(
+                bibleLine.substring(bibleLineNumber,bibleLineNumber + 8)
+                    .getBytes(), algorithm);
+
+            // initialize ciphers
+            this.symmetricCrypter.init(newSecretKey);
+
+            System.out.println("[ V1 ] New secret key generated");
+        }
+        catch (Exception e)
+        {
+            System.out.println("[ V1 ] " + e.getMessage());
+            MessageBoxes.ShowError(e.getMessage(),"Error generating secret key");
+        }
+    }
+
+    private void generateSecretKeyV2()
+    {
+        System.out.println("[ V2 ] Generate new secret key");
+
+        try
+        {
+            // check if client is connected
+            if (this.sock == null || !this.sock.isConnected())
+                throw new Exception("You are disconnected from server");
+
+            // Check if crypter exists
+            if (this.symmetricCrypter == null)
+                throw new Exception("No crypter object available");
+
+            // Create the parameter generator for a 1024-bit DH key pair
+            AlgorithmParameterGenerator paramGen =
+                AlgorithmParameterGenerator.getInstance("DH");
+            paramGen.init(1024);
+
+            System.out.println("[ V2 ] Generating params");
+
+            // Generate the parameters
+            AlgorithmParameters params = paramGen.generateParameters();
+            //Specify parameters to use for the algorithm
+            DHParameterSpec dhSpec = (DHParameterSpec)params.getParameterSpec(
+                DHParameterSpec.class);
+
+            System.out.println("[ V2 ] Params generated");
+
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH");
+            keyGen.initialize(dhSpec);
+
+            KeyPair keypair = keyGen.generateKeyPair();
+
+            // Send a GENERATE_KEY_V2 query to the server with the public key
+            Request query = new Request("GENERATE_KEY_V2");
+            query.addArg(keypair.getPublic().getEncoded());
+
+            System.out.println("[ V2 ] Sending public key");
+            Request reply = query.sendAndRecv(this.sock);
+
+            // If client has been disconnected
+            if (reply.is(Request.NO_COMMAND) || reply.is(Request.SOCK_ERROR))
+            {
+                this.disconnectFromServer();
+                throw new Exception("Disconnected from server");
+            }
+
+            // If query failed
+            if (reply.is("GENERATE_KEY_V2_FAIL"))
+                throw new Exception("Server error : " + reply.getStringArg(0));
+
+            // Unknown command
+            if (!reply.is("GENERATE_KEY_V2_ACK"))
+                throw new Exception("Invalid reply : " + reply.getCommand());
+
+
+            // Get server public key
+            X509EncodedKeySpec x509KeySpec =
+                new X509EncodedKeySpec(reply.getArg(0));
+            KeyFactory keyFact = KeyFactory.getInstance("DH");
+            PublicKey publicKey = keyFact.generatePublic(x509KeySpec);
+
+            /* Prepare the "secret key generator" with the private key
+             * and the server public key */
+            KeyAgreement ka = KeyAgreement.getInstance("DH");
+            ka.init(keypair.getPrivate());
+            ka.doPhase(publicKey, true);
+
+            // Generate new secret key and initialize crypter
+            this.symmetricCrypter.init(ka.generateSecret("DES"));
+
+            System.out.println("[ V2 ] New secret key generated");
+        }
+        catch (Exception e)
+        {
+            System.out.println("[ V2 ] " + e.getMessage());
+            MessageBoxes.ShowError(e.getMessage(), "Error generating secret key");
+        }
+    }
     //</editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -377,16 +533,15 @@ public class MainFrame2 extends javax.swing.JFrame
             options,     // the title of buttons
             options[0]); // default button title
 
-        System.out.println("result = " + choice);
-
         switch(choice)
         {
-            case 0:
+            case 0:     // Version 1
+                this.generateSecretKeyV1();
                 break;
-            case 1:
+            case 1:     // Version 2
+                this.generateSecretKeyV2();
                 break;
-            case 2:
-                break;
+            case 2:     // Cancel or other
             default:
         }
     }//GEN-LAST:event_buttonGenerateNewSecretKeyActionPerformed
