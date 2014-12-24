@@ -93,6 +93,9 @@ public class ThreadServerV1 extends Thread
                     default:
                         System.out.println("[ V1 ] Invalid query : "
                             + this.query.getCommand());
+                        Request.quickSend(this.query.getCommand() + "_FAIL",
+                                          "Invalid query",
+                                          this.socketClient);
                         break;
                 }
             }
