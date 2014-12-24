@@ -3,6 +3,7 @@ package Threads;
 import Utils.PropertyLoader;
 import Utils.Request;
 import Utils.ReturnValue;
+import Utils.SymmetricCrypter;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -16,10 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
-import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHParameterSpec;
 
@@ -36,7 +35,6 @@ public class ThreadServerV2 extends Thread
         this.stopRequested = false;
         this.socketServer = null;
         this.socketClient = null;
-        this.secretKey = null;
         this.rand = new Random();
 
         this.openBible();
@@ -66,7 +64,7 @@ public class ThreadServerV2 extends Thread
             try
             {
                 this.clientStop = false;
-                this.secretKey  = null;
+                this.symmetricCrypter.invalidate();
                 System.out.println("[ V2 ] Waiting client");
                 this.socketClient = this.socketServer.accept();
                 System.out.println("[ V2 ] New client connected");
@@ -156,19 +154,16 @@ public class ThreadServerV2 extends Thread
         }
     }
 
-     private void createCiphers()
+    private void createCiphers()
     {
         try
         {
-            this.encryptCipher = Cipher.getInstance(
-                algorithm + "/" + cipherMode + "/" + padding);
-            this.decryptCipher = Cipher.getInstance(
+            this.symmetricCrypter = new SymmetricCrypter(
                 algorithm + "/" + cipherMode + "/" + padding);
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException ex)
         {
-            this.encryptCipher = null;
-            this.decryptCipher = null;
+            this.symmetricCrypter = null;
             System.out.println("[FAIL] Unable to create ciphers : " + ex.getMessage());
         }
     }
@@ -179,11 +174,13 @@ public class ThreadServerV2 extends Thread
 
         try
         {
-            if (this.secretKey == null)
+            if (this.symmetricCrypter == null)
+                throw new Exception("No cipher objects available");
+
+            if (!this.symmetricCrypter.isValid())
                 throw new Exception("A new secret key must be generated");
 
-            byte[] cipherTextByteArray = this.query.getArg(0);
-            String codedMessage = new String(this.decryptCipher.doFinal(cipherTextByteArray));
+            String codedMessage = this.symmetricCrypter.decryptString(this.query.getArg(0));
             System.out.println("[ V2 ] Decrypted message : " + codedMessage);
 
             System.out.println("[ V2 ] Real message is : " +
@@ -195,7 +192,7 @@ public class ThreadServerV2 extends Thread
 
             // Build reply query
             Request reply = new Request("MESSAGE_ACK");
-            reply.addArg(this.encryptCipher.doFinal(codedMessage.getBytes()));
+            reply.addArg(this.symmetricCrypter.encrypt(codedMessage));
             reply.send(this.socketClient);
 
             System.out.println("[ V2 ] Encrypted message sent (reply)");
@@ -213,7 +210,7 @@ public class ThreadServerV2 extends Thread
 
         try
         {
-            if (this.encryptCipher == null || this.decryptCipher == null)
+            if (this.symmetricCrypter == null)
                 throw new Exception("No cipher objects available");
 /*
             // Create the parameter generator for a 1024-bit DH key pair
@@ -253,16 +250,10 @@ public class ThreadServerV2 extends Thread
              */
             KeyAgreement ka = KeyAgreement.getInstance("DH");
             ka.init(keypair.getPrivate());
-            System.out.println("Avant phase");
             ka.doPhase(publicKey, true);
-            System.out.println("Apres phase");
 
-            // generate new secret key
-            this.secretKey = ka.generateSecret("DES");
-
-            // initialize ciphers
-            this.encryptCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
-            this.decryptCipher.init(Cipher.DECRYPT_MODE, this.secretKey);
+            // Generate new secret key and initialize crypter
+            this.symmetricCrypter.init(ka.generateSecret("DES"));
 
             Request reply = new Request("GENERATE_KEY_ACK");
             reply.addArg(keypair.getPublic().getEncoded());
@@ -295,15 +286,13 @@ public class ThreadServerV2 extends Thread
     private final int port_server;
     private boolean stopRequested;
     private boolean clientStop;
-    private Random rand;
+    private final Random rand;
 
     private List<String> codedSentences;
     private Properties interpreterProperties;
     private Properties bibleProperties;
 
-    private Cipher encryptCipher;
-    private Cipher decryptCipher;
-    private SecretKey secretKey;
+    private SymmetricCrypter symmetricCrypter;
 
     private Request query;
 

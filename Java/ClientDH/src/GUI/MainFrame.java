@@ -1,30 +1,16 @@
 package GUI;
 
-import Utils.MessageBoxes;
-import Utils.PropertyLoader;
-import Utils.Request;
-import Utils.TextAreaOutputStream;
+import Utils.*;
 import java.awt.Color;
 import java.io.IOException;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.AlgorithmParameterGenerator;
-import java.security.AlgorithmParameters;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
+import java.net.*;
+import java.security.*;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
-import javax.crypto.Cipher;
-import javax.crypto.KeyAgreement;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.DHParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.*;
+import javax.crypto.spec.*;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -41,8 +27,6 @@ public class MainFrame extends javax.swing.JFrame
 
         this.sockV1 = null;
         this.sockV2 = null;
-        this.secretKeyV1 = null;
-        this.secretKeyV2 = null;
         this.interpreterProperties = null;
         this.isConnectedV1 = false;
         this.isConnectedV2 = false;
@@ -148,23 +132,17 @@ public class MainFrame extends javax.swing.JFrame
         try
         {
             // Version 1
-            this.encryptCipherV1 = Cipher.getInstance(
-                algorithm + "/" + cipherMode + "/" + padding);
-            this.decryptCipherV1 = Cipher.getInstance(
+            this.symmetricCrypterV1 = new SymmetricCrypter(
                 algorithm + "/" + cipherMode + "/" + padding);
 
             // Version 2
-            this.encryptCipherV2 = Cipher.getInstance(
-                algorithm + "/" + cipherMode + "/" + padding);
-            this.decryptCipherV2 = Cipher.getInstance(
+            this.symmetricCrypterV2 = new SymmetricCrypter(
                 algorithm + "/" + cipherMode + "/" + padding);
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException ex)
         {
-            this.encryptCipherV1 = null;
-            this.decryptCipherV1 = null;
-            this.encryptCipherV2 = null;
-            this.decryptCipherV2 = null;
+            this.symmetricCrypterV1 = null;
+            this.symmetricCrypterV2 = null;
             System.out.println("[FAIL] Unable to create ciphers : " + ex.getMessage());
         }
     }
@@ -235,7 +213,7 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.sockV1.close();
             this.sockV1 = null;
-            this.secretKeyV1 = null;
+            this.symmetricCrypterV1.invalidate();
         }
         catch (Exception ex)
         {
@@ -259,7 +237,7 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.sockV2.close();
             this.sockV2 = null;
-            this.secretKeyV2 = null;
+            this.symmetricCrypterV2.invalidate();
         }
         catch (Exception ex)
         {
@@ -330,8 +308,8 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("You are disconnected from server");
 
             // Check if ciphers exist
-            if (this.encryptCipherV1 == null || this.decryptCipherV1 == null)
-                throw new Exception("No cipher objects available");
+            if (this.symmetricCrypterV1 == null)
+                throw new Exception("No crypter object available");
 
             /* Get bible line number before sending a query to be shure that
              * the line number is the same for the server and the client if
@@ -363,13 +341,12 @@ public class MainFrame extends javax.swing.JFrame
                 + " = " + bibleLine);
 
             // generate new secret key
-            this.secretKeyV1 = new SecretKeySpec(
-                bibleLine.substring(bibleLineNumber,
-                                    bibleLineNumber + 8).getBytes(), algorithm);
+            SecretKey newSecretKey = new SecretKeySpec(
+                bibleLine.substring(bibleLineNumber,bibleLineNumber + 8)
+                    .getBytes(), algorithm);
 
             // initialize ciphers
-            this.encryptCipherV1.init(Cipher.ENCRYPT_MODE, this.secretKeyV1);
-            this.decryptCipherV1.init(Cipher.DECRYPT_MODE, this.secretKeyV1);
+            this.symmetricCrypterV1.init(newSecretKey);
 
             System.out.println("[ V1 ] New secret key generated");
         }
@@ -391,8 +368,8 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("You are disconnected from server");
 
             // Check if ciphers exist
-            if (this.encryptCipherV2 == null || this.decryptCipherV2 == null)
-                throw new Exception("No cipher objects available");
+            if (this.symmetricCrypterV2 == null)
+                throw new Exception("No crypter object available");
 
             // Create the parameter generator for a 1024-bit DH key pair
             AlgorithmParameterGenerator paramGen = AlgorithmParameterGenerator.getInstance("DH");
@@ -446,11 +423,8 @@ public class MainFrame extends javax.swing.JFrame
             ka.init(keypair.getPrivate());
             ka.doPhase(publicKey, true);
 
-            this.secretKeyV2 = ka.generateSecret("DES");
-
-            // initialize ciphers
-            this.encryptCipherV2.init(Cipher.ENCRYPT_MODE, this.secretKeyV2);
-            this.decryptCipherV2.init(Cipher.DECRYPT_MODE, this.secretKeyV2);
+            // Generate new secret key and initialize crypter
+            this.symmetricCrypterV2.init(ka.generateSecret("DES"));
 
             System.out.println("[ V2 ] New secret key generated");
         }
@@ -721,11 +695,11 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("You are disconnected from server");
 
             // Check if ciphers exist
-            if (this.encryptCipherV1 == null || this.decryptCipherV1 == null)
-                throw new Exception("No cipher objects available");
+            if (this.symmetricCrypterV1 == null)
+                throw new Exception("No crypter object available");
 
             // Check if secretKey and ciphers exist
-            if (this.secretKeyV1 == null)
+            if (!this.symmetricCrypterV1.isValid())
                 throw new Exception("A new secret key must be generated");
 
             // Get coded message
@@ -734,7 +708,7 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("Unable to send empty message");
 
             // Encrypt coded message
-            byte[] cipherTextByteArray = this.encryptCipherV1.doFinal(codedMessage.getBytes());
+            byte[] cipherTextByteArray = this.symmetricCrypterV1.encrypt(codedMessage);
 
             // Send new MESSAGE query
             Request query = new Request("MESSAGE");
@@ -758,8 +732,7 @@ public class MainFrame extends javax.swing.JFrame
 
             // Get encoded message
             System.out.println("[ V1 ] Received reply");
-            cipherTextByteArray = reply.getArg(0);
-            codedMessage = new String(this.decryptCipherV1.doFinal(cipherTextByteArray));
+            codedMessage = this.symmetricCrypterV1.decryptString(reply.getArg(0));
 
             System.out.println("[ V1 ] Decrypted message : " + codedMessage);
             System.out.println("[ V1 ] Real message is : " +
@@ -799,11 +772,11 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("You are disconnected from server");
 
             // Check if ciphers exist
-            if (this.encryptCipherV2 == null || this.decryptCipherV2 == null)
-                throw new Exception("No cipher objects available");
+            if (this.symmetricCrypterV2 == null)
+                throw new Exception("No crypter object available");
 
             // Check if secretKey and ciphers exist
-            if (this.secretKeyV2 == null)
+            if (!this.symmetricCrypterV2.isValid())
                 throw new Exception("A new secret key must be generated");
 
             // Get coded message
@@ -812,7 +785,7 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("Unable to send empty message");
 
             // Encrypt coded message
-            byte[] cipherTextByteArray = this.encryptCipherV2.doFinal(codedMessage.getBytes());
+            byte[] cipherTextByteArray = this.symmetricCrypterV2.encrypt(codedMessage);
 
             // Send new MESSAGE query
             Request query = new Request("MESSAGE");
@@ -836,8 +809,7 @@ public class MainFrame extends javax.swing.JFrame
 
             // Get encoded message
             System.out.println("[ V2 ] Received reply");
-            cipherTextByteArray = reply.getArg(0);
-            codedMessage = new String(this.decryptCipherV2.doFinal(cipherTextByteArray));
+            codedMessage = this.symmetricCrypterV2.decryptString(reply.getArg(0));
 
             System.out.println("[ V2 ] Decrypted message : " + codedMessage);
             System.out.println("[ V2 ] Real message is : " +
@@ -927,16 +899,12 @@ public class MainFrame extends javax.swing.JFrame
     // Version 1
     private Socket sockV1;
     private boolean isConnectedV1;
-    private SecretKey secretKeyV1;
-    private Cipher encryptCipherV1;
-    private Cipher decryptCipherV1;
+    private SymmetricCrypter symmetricCrypterV1;
 
     // Version 2
     private Socket sockV2;
     private boolean isConnectedV2;
-    private SecretKey secretKeyV2;
-    private Cipher encryptCipherV2;
-    private Cipher decryptCipherV2;
+    private SymmetricCrypter symmetricCrypterV2;
 
     // Models
     private DefaultComboBoxModel messagesModel;
