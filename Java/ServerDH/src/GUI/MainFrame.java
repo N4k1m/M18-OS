@@ -1,6 +1,7 @@
 package GUI;
 
 import Threads.ThreadServerV1;
+import Threads.ThreadServerV2;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
@@ -52,7 +53,10 @@ public class MainFrame extends javax.swing.JFrame
         }
         finally
         {
+            this.threadServerV1 = null;
+            this.threadServerV2 = null;
             this.showStatusV1();
+            this.showStatusV2();
         }
     }
     //</editor-fold>
@@ -68,6 +72,18 @@ public class MainFrame extends javax.swing.JFrame
         this.threadServerV1 = new ThreadServerV1(port);
         this.threadServerV1.start();
         this.showStatusV1();
+    }
+
+    private void startServerV2()
+    {
+        if (this.threadServerV2 != null)
+            this.stopServerV2();
+
+        // Start thread
+        int port = (int)this.spinnerPortV2.getValue();
+        this.threadServerV2 = new ThreadServerV2(port);
+        this.threadServerV2.start();
+        this.showStatusV2();
     }
 
     private void stopServerV1()
@@ -92,6 +108,28 @@ public class MainFrame extends javax.swing.JFrame
         }
     }
 
+    private void stopServerV2()
+    {
+        if (this.threadServerV2 == null)
+            return;
+
+        try
+        {
+            // Stop thread
+            this.threadServerV2.requestStop();
+            this.threadServerV2.join();
+            this.threadServerV2 = null;
+        }
+        catch (IOException | InterruptedException ex)
+        {
+            System.err.println(ex);
+        }
+        finally
+        {
+            this.showStatusV2();
+        }
+    }
+
     private void showStatusV1()
     {
         this.isRunningV1 = this.threadServerV1 != null &&
@@ -110,6 +148,27 @@ public class MainFrame extends javax.swing.JFrame
             this.labelStatusV1.setForeground(Color.RED);
             this.labelStatusV1.setText("Server stopped");
             this.buttonStartStopV1.setText("Start");
+        }
+    }
+
+    private void showStatusV2()
+    {
+        this.isRunningV2 = this.threadServerV2 != null &&
+                           this.threadServerV2.isAlive();
+
+        this.spinnerPortV2.setEnabled(!this.isRunningV2);
+
+        if (this.isRunningV2)
+        {
+            this.labelStatusV2.setForeground(Color.GREEN);
+            this.labelStatusV2.setText("Server is running");
+            this.buttonStartStopV2.setText("Stop");
+        }
+        else
+        {
+            this.labelStatusV2.setForeground(Color.RED);
+            this.labelStatusV2.setText("Server stopped");
+            this.buttonStartStopV2.setText("Start");
         }
     }
     //</editor-fold>
@@ -249,6 +308,13 @@ public class MainFrame extends javax.swing.JFrame
         panelV2.add(spinnerPortV2, gridBagConstraints);
 
         buttonStartStopV2.setText("Start");
+        buttonStartStopV2.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonStartStopV2ActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 0;
@@ -279,6 +345,14 @@ public class MainFrame extends javax.swing.JFrame
     {//GEN-HEADEREND:event_buttonClearActionPerformed
         this.textAreaOutput.setText(null);
     }//GEN-LAST:event_buttonClearActionPerformed
+
+    private void buttonStartStopV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonStartStopV2ActionPerformed
+    {//GEN-HEADEREND:event_buttonStartStopV2ActionPerformed
+        if (this.isRunningV2)
+            this.stopServerV2();
+        else
+            this.startServerV2();
+    }//GEN-LAST:event_buttonStartStopV2ActionPerformed
     // </editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Main">
@@ -336,7 +410,9 @@ public class MainFrame extends javax.swing.JFrame
     // <editor-fold defaultstate="collapsed" desc="Private variables">
     private Properties prop;
     private boolean isRunningV1;
+    private boolean isRunningV2;
     private ThreadServerV1 threadServerV1;
+    private ThreadServerV2 threadServerV2;
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Static variables">
