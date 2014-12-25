@@ -1,18 +1,32 @@
 package GUI;
 
-import Utils.*;
+import Utils.MessageBoxes;
+import Utils.PropertyLoader;
+import Utils.Request;
+import Utils.SymmetricCrypter;
+import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.io.IOException;
-import java.net.*;
-import java.security.*;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.AlgorithmParameterGenerator;
+import java.security.AlgorithmParameters;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
-import javax.crypto.*;
-import javax.crypto.spec.*;
+import javax.crypto.KeyAgreement;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -20,61 +34,25 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class MainFrame extends javax.swing.JFrame
 {
+
     //<editor-fold defaultstate="collapsed" desc="Constructor">
     public MainFrame()
     {
         this.initComponents();
-
-        this.sockV1 = null;
-        this.sockV2 = null;
-        this.interpreterProperties = null;
-        this.isConnectedV1 = false;
-        this.isConnectedV2 = false;
+        this.createModels();
+        this.createCrypter();
 
         // Redirect the system output to a TextArea
         TextAreaOutputStream toas = TextAreaOutputStream.getInstance(
             this.textAreaOutput);
 
-        // Load properties file
-        try
-        {
-            String path = System.getProperty("user.dir");
-            path += System.getProperty("file.separator")
-                    + "src"
-                    + System.getProperty("file.separator")
-                    + "GUI"
-                    + System.getProperty("file.separator")
-                    + "config.properties";
-
-            Properties propConfig = PropertyLoader.load(path);
-
-            // Set the default ip servers
-            this.textFieldIPServerV1.setText(
-                propConfig.getProperty("ip_server_v1", DEFAULT_IP_V1));
-            this.textFieldIPServerV2.setText(
-                propConfig.getProperty("ip_server_v2", DEFAULT_IP_V2));
-
-            // Set the default port server
-            this.spinnerPortServerV1.setValue(
-                new Integer(propConfig.getProperty(
-                    "port_server_v1", DEFAULT_PORT_V1)));
-            this.spinnerPortServerV2.setValue(
-                new Integer(propConfig.getProperty(
-                    "port_server_v2", DEFAULT_PORT_V2)));
-        }
-        catch (IOException ex)
-        {
-            System.err.println(ex);
-        }
-
-        this.createModels();
+        this.loadDefaultSettings();
         this.openBible();
 
-        // Create cipher
-        this.createCiphers();
+        this.sock = null;
+        this.isConnected = false;
 
-        this.showStatusV1();
-        this.showStatusV2();
+        this.showStatus();
     }
     //</editor-fold>
 
@@ -95,10 +73,54 @@ public class MainFrame extends javax.swing.JFrame
             this.interpreterProperties = PropertyLoader.load(path);
 
             // Get all messages
-            this.messagesModel = new DefaultComboBoxModel(
-                this.interpreterProperties.keySet().toArray());
-            this.comboBoxMessageV1.setModel(this.messagesModel);
-            this.comboBoxMessageV2.setModel(this.messagesModel);
+            this.messagesModel = new DefaultComboBoxModel<>();
+            this.interpreterProperties.keySet().stream().forEach((message) ->
+            {
+                this.messagesModel.addElement((String)message);
+            });
+
+            this.comboBoxMessages.setModel(this.messagesModel);
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
+    }
+
+    private void createCrypter()
+    {
+        try
+        {
+            this.symmetricCrypter = new SymmetricCrypter(
+                algorithm + "/" + cipherMode + "/" + padding);
+        }
+        catch (NoSuchAlgorithmException | NoSuchPaddingException ex)
+        {
+            this.symmetricCrypter = null;
+            System.out.println("[FAIL] Unable to create ciphers : "
+                + ex.getMessage());
+        }
+    }
+
+    private void loadDefaultSettings()
+    {
+        // Load properties file
+        try
+        {
+            String path = System.getProperty("user.dir");
+            path += System.getProperty("file.separator") + "src"
+                 + System.getProperty("file.separator")  + "GUI"
+                 + System.getProperty("file.separator")  + "config.properties";
+
+            Properties propConfig = PropertyLoader.load(path);
+
+            // Set the default server ip and port
+            this.textFieldIP.setText(propConfig.getProperty(
+                "ip_server", DEFAULT_IP));
+            this.spinnerPort.setValue(new Integer(propConfig.getProperty(
+                "port_server", DEFAULT_PORT)));
+
+            System.out.println("[ OK ] Default settings loaded");
         }
         catch (IOException ex)
         {
@@ -127,38 +149,44 @@ public class MainFrame extends javax.swing.JFrame
         }
     }
 
-    private void createCiphers()
+    private void showStatus()
     {
-        try
-        {
-            // Version 1
-            this.symmetricCrypterV1 = new SymmetricCrypter(
-                algorithm + "/" + cipherMode + "/" + padding);
+        this.isConnected = this.sock != null && this.sock.isConnected();
 
-            // Version 2
-            this.symmetricCrypterV2 = new SymmetricCrypter(
-                algorithm + "/" + cipherMode + "/" + padding);
-        }
-        catch (NoSuchAlgorithmException | NoSuchPaddingException ex)
+        // Enable or disable widgets
+        this.spinnerPort.setEnabled(!this.isConnected);
+        this.textFieldIP.setEnabled(!this.isConnected);
+        this.comboBoxMessages.setEnabled(this.isConnected);
+        this.buttonGenerateNewSecretKey.setEnabled(this.isConnected);
+        this.buttonSendMessage.setEnabled(this.isConnected);
+
+        if (this.isConnected)
         {
-            this.symmetricCrypterV1 = null;
-            this.symmetricCrypterV2 = null;
-            System.out.println("[FAIL] Unable to create ciphers : " + ex.getMessage());
+            this.labelStatus.setForeground(Color.GREEN);
+            this.labelStatus.setText("Connected");
+            this.buttonConnect.setText("Disconnect");
+        }
+        else
+        {
+            this.labelStatus.setForeground(Color.RED);
+            this.labelStatus.setText("Disconnected");
+            this.buttonConnect.setText("Connect");
         }
     }
 
-    private void connectToServerV1()
+    private void connectToServer()
     {
-        if (this.sockV1 != null)
-            this.disconnectFromServerV1();
+        if (this.sock != null)
+            this.disconnectFromServer();
 
-        int port = (int)this.spinnerPortServerV1.getValue();
-        String ip = this.textFieldIPServerV1.getText();
-        System.out.println("[ V1 ] Connection to server " + ip + ":" + port);
+        int port = (int)this.spinnerPort.getValue();
+        String ip = this.textFieldIP.getText();
+        System.out.println("[ OK ] Start a new connection to server "
+            + ip + ":" + port);
 
         try
         {
-            this.sockV1 = new Socket(ip, port);
+            this.sock = new Socket(ip, port);
         }
         catch (UnknownHostException ex)
         {
@@ -170,40 +198,13 @@ public class MainFrame extends javax.swing.JFrame
         }
         finally
         {
-            this.showStatusV1();
+            this.showStatus();
         }
     }
 
-    private void connectToServerV2()
+    private void disconnectFromServer()
     {
-        if (this.sockV2 != null)
-            this.disconnectFromServerV2();
-
-        int port = (int)this.spinnerPortServerV2.getValue();
-        String ip = this.textFieldIPServerV2.getText();
-        System.out.println("[ V2 ] Connection to server " + ip + ":" + port);
-
-        try
-        {
-            this.sockV2 = new Socket(ip, port);
-        }
-        catch (UnknownHostException ex)
-        {
-            System.out.println("[FAIL] Host unreachable. Invalid IP " + ip);
-        }
-        catch (IOException ex)
-        {
-            System.out.println("[FAIL] Failed to connect");
-        }
-        finally
-        {
-            this.showStatusV2();
-        }
-    }
-
-    private void disconnectFromServerV1()
-    {
-        if (this.sockV1 == null)
+        if (this.sock == null)
         {
             System.out.println("[FAIL] You are not connected to the server");
             return;
@@ -211,89 +212,18 @@ public class MainFrame extends javax.swing.JFrame
 
         try
         {
-            this.sockV1.close();
-            this.sockV1 = null;
-            this.symmetricCrypterV1.invalidate();
+            this.sock.close();
+            this.sock = null;
+            this.symmetricCrypter.invalidate();
         }
         catch (Exception ex)
         {
-            System.out.println("[FAIL] An error occurred disconnecting the system from the server : " + ex);
+            System.out.println("[FAIL] An error occurred disconnecting the "
+                + "system from the server : " + ex);
         }
         finally
         {
-            this.showStatusV1();
-        }
-    }
-
-    private void disconnectFromServerV2()
-    {
-        if (this.sockV2 == null)
-        {
-            System.out.println("[FAIL] You are not connected to the server");
-            return;
-        }
-
-        try
-        {
-            this.sockV2.close();
-            this.sockV2 = null;
-            this.symmetricCrypterV2.invalidate();
-        }
-        catch (Exception ex)
-        {
-            System.out.println("[FAIL] An error occurred disconnecting the system from the server : " + ex);
-        }
-        finally
-        {
-            this.showStatusV2();
-        }
-    }
-
-    private void showStatusV1()
-    {
-        this.isConnectedV1 = this.sockV1 != null && this.sockV1.isConnected();
-
-        this.spinnerPortServerV1.setEnabled(!this.isConnectedV1);
-        this.textFieldIPServerV1.setEnabled(!this.isConnectedV1);
-        this.comboBoxMessageV1.setEnabled(this.isConnectedV1);
-        this.buttonGenerateKeyV1.setEnabled(this.isConnectedV1);
-        this.buttonSendMessageV1.setEnabled(this.isConnectedV1);
-
-        if (this.isConnectedV1)
-        {
-            this.labelStatusV1.setForeground(Color.GREEN);
-            this.labelStatusV1.setText("Connected");
-            this.buttonConnectV1.setText("Disconnect");
-        }
-        else
-        {
-            this.labelStatusV1.setForeground(Color.RED);
-            this.labelStatusV1.setText("Disconnected");
-            this.buttonConnectV1.setText("Connect");
-        }
-    }
-
-    private void showStatusV2()
-    {
-        this.isConnectedV2 = this.sockV2 != null && this.sockV2.isConnected();
-
-        this.spinnerPortServerV2.setEnabled(!this.isConnectedV2);
-        this.textFieldIPServerV2.setEnabled(!this.isConnectedV2);
-        this.comboBoxMessageV2.setEnabled(this.isConnectedV2);
-        this.buttonGenerateKeyV2.setEnabled(this.isConnectedV2);
-        this.buttonSendMessageV2.setEnabled(this.isConnectedV2);
-
-        if (this.isConnectedV2)
-        {
-            this.labelStatusV2.setForeground(Color.GREEN);
-            this.labelStatusV2.setText("Connected");
-            this.buttonConnectV2.setText("Disconnect");
-        }
-        else
-        {
-            this.labelStatusV2.setForeground(Color.RED);
-            this.labelStatusV2.setText("Disconnected");
-            this.buttonConnectV2.setText("Connect");
+            this.showStatus();
         }
     }
 
@@ -303,12 +233,12 @@ public class MainFrame extends javax.swing.JFrame
 
         try
         {
-            // Check if client is connected
-            if (this.sockV1 == null || !this.sockV1.isConnected())
+            // check if client is connected
+            if (this.sock == null || !this.sock.isConnected())
                 throw new Exception("You are disconnected from server");
 
-            // Check if ciphers exist
-            if (this.symmetricCrypterV1 == null)
+            // Check if crypter exists
+            if (this.symmetricCrypter == null)
                 throw new Exception("No crypter object available");
 
             /* Get bible line number before sending a query to be shure that
@@ -317,21 +247,23 @@ public class MainFrame extends javax.swing.JFrame
             String minute = new SimpleDateFormat("mm").format(new Date());
             int bibleLineNumber = Integer.parseInt(minute) % 10;
 
-            // Send a GENERATE_KEY request
-            Request query = new Request("GENERATE_KEY");
-            Request reply = query.sendAndRecv(this.sockV1);
+            // Send a GENERATE_KEY_V1 query
+            Request query = new Request("GENERATE_KEY_V1");
+            Request reply = query.sendAndRecv(this.sock);
 
-            // If client has been disconected
-            if (reply.is("NO_COMMAND"))
+            // If client has been disconnected
+            if (reply.is(Request.NO_COMMAND) || reply.is(Request.SOCK_ERROR))
             {
-                this.disconnectFromServerV1();
+                this.disconnectFromServer();
                 throw new Exception("Disconnected from server");
             }
 
-            if (reply.is("GENERATE_KEY_FAIL"))
-                throw new Exception(reply.getStringArg(0));
+            // If query failed
+            if (reply.is("GENERATE_KEY_V1_FAIL"))
+                throw new Exception("Server error : " + reply.getStringArg(0));
 
-            if (!reply.is("GENERATE_KEY_ACK"))
+            // Unknown command
+            if (!reply.is("GENERATE_KEY_V1_ACK"))
                 throw new Exception("Invalid reply : " + reply.getCommand());
 
             // Get bible line at "bibleLineNumber"
@@ -340,20 +272,20 @@ public class MainFrame extends javax.swing.JFrame
             System.out.println("[ V1 ] bible line " + bibleLineNumber
                 + " = " + bibleLine);
 
-            // generate new secret key
+            // Generate new secret key
             SecretKey newSecretKey = new SecretKeySpec(
                 bibleLine.substring(bibleLineNumber,bibleLineNumber + 8)
                     .getBytes(), algorithm);
 
-            // initialize ciphers
-            this.symmetricCrypterV1.init(newSecretKey);
+            // Initialize crypter
+            this.symmetricCrypter.init(newSecretKey);
 
             System.out.println("[ V1 ] New secret key generated");
         }
         catch (Exception e)
         {
             System.out.println("[ V1 ] " + e.getMessage());
-            MessageBoxes.ShowError(e.getMessage(), "Error generating secret key");
+            MessageBoxes.ShowError(e.getMessage(),"Error generating secret key");
         }
     }
 
@@ -363,16 +295,17 @@ public class MainFrame extends javax.swing.JFrame
 
         try
         {
-            // Check if client is connected
-            if (this.sockV2 == null || !this.sockV2.isConnected())
+            // check if client is connected
+            if (this.sock == null || !this.sock.isConnected())
                 throw new Exception("You are disconnected from server");
 
-            // Check if ciphers exist
-            if (this.symmetricCrypterV2 == null)
+            // Check if crypter exists
+            if (this.symmetricCrypter == null)
                 throw new Exception("No crypter object available");
 
             // Create the parameter generator for a 1024-bit DH key pair
-            AlgorithmParameterGenerator paramGen = AlgorithmParameterGenerator.getInstance("DH");
+            AlgorithmParameterGenerator paramGen =
+                AlgorithmParameterGenerator.getInstance("DH");
             paramGen.init(1024);
 
             System.out.println("[ V2 ] Generating params");
@@ -380,7 +313,8 @@ public class MainFrame extends javax.swing.JFrame
             // Generate the parameters
             AlgorithmParameters params = paramGen.generateParameters();
             //Specify parameters to use for the algorithm
-            DHParameterSpec dhSpec = (DHParameterSpec)params.getParameterSpec(DHParameterSpec.class);
+            DHParameterSpec dhSpec = (DHParameterSpec)params.getParameterSpec(
+                DHParameterSpec.class);
 
             System.out.println("[ V2 ] Params generated");
 
@@ -389,42 +323,43 @@ public class MainFrame extends javax.swing.JFrame
 
             KeyPair keypair = keyGen.generateKeyPair();
 
-            // Send a GENERATE_KEY request to the server with the public key bytes
-            Request query = new Request("GENERATE_KEY");
+            // Send a GENERATE_KEY_V2 query to the server with the public key
+            Request query = new Request("GENERATE_KEY_V2");
             query.addArg(keypair.getPublic().getEncoded());
 
             System.out.println("[ V2 ] Sending public key");
-            Request reply = query.sendAndRecv(this.sockV2);
+            Request reply = query.sendAndRecv(this.sock);
 
-            // If client has been disconected
-            if (reply.is("NO_COMMAND"))
+            // If client has been disconnected
+            if (reply.is(Request.NO_COMMAND) || reply.is(Request.SOCK_ERROR))
             {
-                this.disconnectFromServerV2();
+                this.disconnectFromServer();
                 throw new Exception("Disconnected from server");
             }
 
-            if (reply.is("GENERATE_KEY_FAIL"))
-                throw new Exception(reply.getStringArg(0));
+            // If query failed
+            if (reply.is("GENERATE_KEY_V2_FAIL"))
+                throw new Exception("Server error : " + reply.getStringArg(0));
 
-            if (!reply.is("GENERATE_KEY_ACK"))
+            // Unknown command
+            if (!reply.is("GENERATE_KEY_V2_ACK"))
                 throw new Exception("Invalid reply : " + reply.getCommand());
 
 
-            // Get public key from server
-            X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(
-                reply.getArg(0));
+            // Get server public key
+            X509EncodedKeySpec x509KeySpec =
+                new X509EncodedKeySpec(reply.getArg(0));
             KeyFactory keyFact = KeyFactory.getInstance("DH");
             PublicKey publicKey = keyFact.generatePublic(x509KeySpec);
 
-            /* Prepare to generate the secret key with the private key and
-             * public key of the server
-             */
+            /* Prepare the "secret key generator" with the private key
+             * and the server public key */
             KeyAgreement ka = KeyAgreement.getInstance("DH");
             ka.init(keypair.getPrivate());
             ka.doPhase(publicKey, true);
 
             // Generate new secret key and initialize crypter
-            this.symmetricCrypterV2.init(ka.generateSecret("DES"));
+            this.symmetricCrypter.init(ka.generateSecret(algorithm));
 
             System.out.println("[ V2 ] New secret key generated");
         }
@@ -442,39 +377,23 @@ public class MainFrame extends javax.swing.JFrame
         java.awt.GridBagConstraints gridBagConstraints;
 
         buttonClear = new javax.swing.JButton();
+        panelHeader = new javax.swing.JPanel();
+        buttonConnect = new javax.swing.JButton();
+        panelHeaderBody = new javax.swing.JPanel();
+        labelStatusInfo = new javax.swing.JLabel();
+        labelStatus = new javax.swing.JLabel();
+        labelIPServer = new javax.swing.JLabel();
+        textFieldIP = new javax.swing.JTextField();
+        labelPort = new javax.swing.JLabel();
+        spinnerPort = new javax.swing.JSpinner();
         splitPane = new javax.swing.JSplitPane();
         scrollPane = new javax.swing.JScrollPane();
         textAreaOutput = new javax.swing.JTextArea();
-        tabbedPane = new javax.swing.JTabbedPane();
-        panelV1 = new javax.swing.JPanel();
-        panelHeaderV1 = new javax.swing.JPanel();
-        buttonConnectV1 = new javax.swing.JButton();
-        panelHeaderBodyV1 = new javax.swing.JPanel();
-        labelStatusInfoV1 = new javax.swing.JLabel();
-        labelStatusV1 = new javax.swing.JLabel();
-        labelIPV1 = new javax.swing.JLabel();
-        textFieldIPServerV1 = new javax.swing.JTextField();
-        labelPortV1 = new javax.swing.JLabel();
-        spinnerPortServerV1 = new javax.swing.JSpinner();
-        panelBodyV1 = new javax.swing.JPanel();
-        buttonGenerateKeyV1 = new javax.swing.JButton();
-        buttonSendMessageV1 = new javax.swing.JButton();
-        comboBoxMessageV1 = new javax.swing.JComboBox();
-        labelMessageV1 = new javax.swing.JLabel();
-        panelV2 = new javax.swing.JPanel();
-        panelHeaderV2 = new javax.swing.JPanel();
-        buttonConnectV2 = new javax.swing.JButton();
-        panelHeaderBodyV2 = new javax.swing.JPanel();
-        labelStatusInfoV2 = new javax.swing.JLabel();
-        labelStatusV2 = new javax.swing.JLabel();
-        labelIPV2 = new javax.swing.JLabel();
-        textFieldIPServerV2 = new javax.swing.JTextField();
-        labelPortV2 = new javax.swing.JLabel();
-        spinnerPortServerV2 = new javax.swing.JSpinner();
-        panelBodyV2 = new javax.swing.JPanel();
-        buttonGenerateKeyV2 = new javax.swing.JButton();
-        buttonSendMessageV2 = new javax.swing.JButton();
-        comboBoxMessageV2 = new javax.swing.JComboBox();
+        panelBody = new javax.swing.JPanel();
+        labelMessage = new javax.swing.JLabel();
+        comboBoxMessages = new javax.swing.JComboBox<String>();
+        buttonGenerateNewSecretKey = new javax.swing.JButton();
+        buttonSendMessage = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Client Diffie Hellman");
@@ -489,183 +408,99 @@ public class MainFrame extends javax.swing.JFrame
         });
         getContentPane().add(buttonClear, java.awt.BorderLayout.PAGE_END);
 
+        panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panelHeader.setLayout(new java.awt.BorderLayout());
+
+        buttonConnect.setText("<state>");
+        buttonConnect.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonConnectActionPerformed(evt);
+            }
+        });
+        panelHeader.add(buttonConnect, java.awt.BorderLayout.LINE_END);
+
+        panelHeaderBody.setLayout(new java.awt.GridLayout(3, 2));
+
+        labelStatusInfo.setText("Status :");
+        panelHeaderBody.add(labelStatusInfo);
+
+        labelStatus.setText("<status>");
+        panelHeaderBody.add(labelStatus);
+
+        labelIPServer.setText("IP address :");
+        panelHeaderBody.add(labelIPServer);
+
+        textFieldIP.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
+        panelHeaderBody.add(textFieldIP);
+
+        labelPort.setText("Port :");
+        panelHeaderBody.add(labelPort);
+
+        spinnerPort.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
+        panelHeaderBody.add(spinnerPort);
+
+        panelHeader.add(panelHeaderBody, java.awt.BorderLayout.CENTER);
+
+        getContentPane().add(panelHeader, java.awt.BorderLayout.PAGE_START);
+
         splitPane.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
 
-        textAreaOutput.setColumns(20);
-        textAreaOutput.setRows(5);
         scrollPane.setViewportView(textAreaOutput);
 
         splitPane.setBottomComponent(scrollPane);
 
-        panelV1.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        panelV1.setLayout(new java.awt.BorderLayout());
+        panelBody.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panelBody.setLayout(new java.awt.GridBagLayout());
 
-        panelHeaderV1.setLayout(new java.awt.BorderLayout());
-
-        buttonConnectV1.setText("<state>");
-        buttonConnectV1.addActionListener(new java.awt.event.ActionListener()
-        {
-            public void actionPerformed(java.awt.event.ActionEvent evt)
-            {
-                buttonConnectV1ActionPerformed(evt);
-            }
-        });
-        panelHeaderV1.add(buttonConnectV1, java.awt.BorderLayout.LINE_END);
-
-        panelHeaderBodyV1.setLayout(new java.awt.GridLayout(3, 2));
-
-        labelStatusInfoV1.setText("Status :");
-        panelHeaderBodyV1.add(labelStatusInfoV1);
-
-        labelStatusV1.setText("<status>");
-        panelHeaderBodyV1.add(labelStatusV1);
-
-        labelIPV1.setText("IP address :");
-        panelHeaderBodyV1.add(labelIPV1);
-        panelHeaderBodyV1.add(textFieldIPServerV1);
-
-        labelPortV1.setText("Port : ");
-        panelHeaderBodyV1.add(labelPortV1);
-
-        spinnerPortServerV1.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
-        panelHeaderBodyV1.add(spinnerPortServerV1);
-
-        panelHeaderV1.add(panelHeaderBodyV1, java.awt.BorderLayout.CENTER);
-
-        panelV1.add(panelHeaderV1, java.awt.BorderLayout.PAGE_START);
-
-        panelBodyV1.setLayout(new java.awt.GridBagLayout());
-
-        buttonGenerateKeyV1.setText("Generate new key");
-        buttonGenerateKeyV1.addActionListener(new java.awt.event.ActionListener()
-        {
-            public void actionPerformed(java.awt.event.ActionEvent evt)
-            {
-                buttonGenerateKeyV1ActionPerformed(evt);
-            }
-        });
+        labelMessage.setText("Message :");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 2;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.1;
-        panelBodyV1.add(buttonGenerateKeyV1, gridBagConstraints);
-
-        buttonSendMessageV1.setText("Send message");
-        buttonSendMessageV1.addActionListener(new java.awt.event.ActionListener()
-        {
-            public void actionPerformed(java.awt.event.ActionEvent evt)
-            {
-                buttonSendMessageV1ActionPerformed(evt);
-            }
-        });
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.1;
-        panelBodyV1.add(buttonSendMessageV1, gridBagConstraints);
-
+        gridBagConstraints.weightx = 0.2;
+        panelBody.add(labelMessage, gridBagConstraints);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.2;
-        panelBodyV1.add(comboBoxMessageV1, gridBagConstraints);
+        panelBody.add(comboBoxMessages, gridBagConstraints);
 
-        labelMessageV1.setText("Message : ");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.gridwidth = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        panelBodyV1.add(labelMessageV1, gridBagConstraints);
-
-        panelV1.add(panelBodyV1, java.awt.BorderLayout.CENTER);
-
-        tabbedPane.addTab("Version 1 - Secret word", panelV1);
-
-        panelV2.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        panelV2.setLayout(new java.awt.BorderLayout());
-
-        panelHeaderV2.setLayout(new java.awt.BorderLayout());
-
-        buttonConnectV2.setText("<state>");
-        buttonConnectV2.addActionListener(new java.awt.event.ActionListener()
+        buttonGenerateNewSecretKey.setText("Generate new secret key");
+        buttonGenerateNewSecretKey.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
             {
-                buttonConnectV2ActionPerformed(evt);
-            }
-        });
-        panelHeaderV2.add(buttonConnectV2, java.awt.BorderLayout.LINE_END);
-
-        panelHeaderBodyV2.setLayout(new java.awt.GridLayout(3, 2));
-
-        labelStatusInfoV2.setText("Status :");
-        panelHeaderBodyV2.add(labelStatusInfoV2);
-
-        labelStatusV2.setText("<status>");
-        panelHeaderBodyV2.add(labelStatusV2);
-
-        labelIPV2.setText("IP address :");
-        panelHeaderBodyV2.add(labelIPV2);
-        panelHeaderBodyV2.add(textFieldIPServerV2);
-
-        labelPortV2.setText("Port : ");
-        panelHeaderBodyV2.add(labelPortV2);
-
-        spinnerPortServerV2.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
-        panelHeaderBodyV2.add(spinnerPortServerV2);
-
-        panelHeaderV2.add(panelHeaderBodyV2, java.awt.BorderLayout.CENTER);
-
-        panelV2.add(panelHeaderV2, java.awt.BorderLayout.PAGE_START);
-
-        panelBodyV2.setLayout(new java.awt.GridBagLayout());
-
-        buttonGenerateKeyV2.setText("Generate new key");
-        buttonGenerateKeyV2.addActionListener(new java.awt.event.ActionListener()
-        {
-            public void actionPerformed(java.awt.event.ActionEvent evt)
-            {
-                buttonGenerateKeyV2ActionPerformed(evt);
+                buttonGenerateNewSecretKeyActionPerformed(evt);
             }
         });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.1;
-        panelBodyV2.add(buttonGenerateKeyV2, gridBagConstraints);
+        panelBody.add(buttonGenerateNewSecretKey, gridBagConstraints);
 
-        buttonSendMessageV2.setText("Send message");
-        buttonSendMessageV2.addActionListener(new java.awt.event.ActionListener()
+        buttonSendMessage.setText("Send message");
+        buttonSendMessage.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
             {
-                buttonSendMessageV2ActionPerformed(evt);
+                buttonSendMessageActionPerformed(evt);
             }
         });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.1;
-        panelBodyV2.add(buttonSendMessageV2, gridBagConstraints);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.gridwidth = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        panelBodyV2.add(comboBoxMessageV2, gridBagConstraints);
+        panelBody.add(buttonSendMessage, gridBagConstraints);
 
-        panelV2.add(panelBodyV2, java.awt.BorderLayout.CENTER);
-
-        tabbedPane.addTab("Version 2 - Diffie Hellman", panelV2);
-
-        splitPane.setLeftComponent(tabbedPane);
+        splitPane.setLeftComponent(panelBody);
 
         getContentPane().add(splitPane, java.awt.BorderLayout.CENTER);
 
@@ -673,53 +508,73 @@ public class MainFrame extends javax.swing.JFrame
     }// </editor-fold>//GEN-END:initComponents
 
     //<editor-fold defaultstate="collapsed" desc="Events management">
-    private void buttonConnectV1ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonConnectV1ActionPerformed
-    {//GEN-HEADEREND:event_buttonConnectV1ActionPerformed
-        if (this.isConnectedV1)
-            this.disconnectFromServerV1();
+    private void buttonConnectActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonConnectActionPerformed
+    {//GEN-HEADEREND:event_buttonConnectActionPerformed
+        if (this.isConnected)
+            this.disconnectFromServer();
         else
-            this.connectToServerV1();
-    }//GEN-LAST:event_buttonConnectV1ActionPerformed
+            this.connectToServer();
+    }//GEN-LAST:event_buttonConnectActionPerformed
 
-    private void buttonClearActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonClearActionPerformed
-    {//GEN-HEADEREND:event_buttonClearActionPerformed
-        this.textAreaOutput.setText(null);
-    }//GEN-LAST:event_buttonClearActionPerformed
+    private void buttonGenerateNewSecretKeyActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateNewSecretKeyActionPerformed
+    {//GEN-HEADEREND:event_buttonGenerateNewSecretKeyActionPerformed
+        Object[] options = {"Version 1 - Secret Message",
+                            "Version 2 - Difie Hellman",
+                            "Cancel"};
+        int choice = JOptionPane.showOptionDialog(this,
+            "Select the key exchange method :",
+            "Key exchange choice",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,        // do not use a custom icon
+            options,     // the title of buttons
+            options[0]); // default button title
 
-    private void buttonSendMessageV1ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonSendMessageV1ActionPerformed
-    {//GEN-HEADEREND:event_buttonSendMessageV1ActionPerformed
+        switch(choice)
+        {
+            case 0:     // Version 1
+                this.generateSecretKeyV1();
+                break;
+            case 1:     // Version 2
+                this.generateSecretKeyV2();
+                break;
+            case 2:     // Cancel or other
+            default:
+        }
+    }//GEN-LAST:event_buttonGenerateNewSecretKeyActionPerformed
+
+    private void buttonSendMessageActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonSendMessageActionPerformed
+    {//GEN-HEADEREND:event_buttonSendMessageActionPerformed
         try
         {
-            // Check if client is connected
-            if (this.sockV1 == null || !this.sockV1.isConnected())
+            // check if client is connected
+            if (this.sock == null || !this.sock.isConnected())
                 throw new Exception("You are disconnected from server");
 
-            // Check if ciphers exist
-            if (this.symmetricCrypterV1 == null)
+            // Check if crypter exists
+            if (this.symmetricCrypter == null)
                 throw new Exception("No crypter object available");
 
-            // Check if secretKey and ciphers exist
-            if (!this.symmetricCrypterV1.isValid())
+            // Check if crypter is valid (has valid secret key)
+            if (!this.symmetricCrypter.isValid())
                 throw new Exception("A new secret key must be generated");
 
             // Get coded message
-            String codedMessage = (String)this.comboBoxMessageV1.getSelectedItem();
+            String codedMessage = (String)comboBoxMessages.getSelectedItem();
             if (codedMessage == null || codedMessage.isEmpty())
-                throw new Exception("Unable to send empty message");
+                throw new Exception("Empty message can' be sent");
 
-            // Encrypt coded message
-            byte[] cipherTextByteArray = this.symmetricCrypterV1.encrypt(codedMessage);
-
-            // Send new MESSAGE query
+            // Send a new MESSAGE query with the coded message encrypted
             Request query = new Request("MESSAGE");
-            query.addArg(cipherTextByteArray);
-            System.out.println("[ V1 ] Encrypted message sent");
-            Request reply = query.sendAndRecv(this.sockV1);
+            query.addArg(this.symmetricCrypter.encrypt(codedMessage));
 
-            // If client has been disconected
-            if (reply.is("NO_COMMAND"))
+            System.out.println("[ OK ] Coded message encrypted sent");
+            Request reply = query.sendAndRecv(this.sock);
+
+            // If client has been disconnected
+            if (reply.is(Request.NO_COMMAND) || reply.is(Request.SOCK_ERROR))
             {
-                this.disconnectFromServerV1();
+                this.disconnectFromServer();
                 throw new Exception("Disconnected from server");
             }
 
@@ -727,100 +582,30 @@ public class MainFrame extends javax.swing.JFrame
             if (reply.is("MESSAGE_FAIL"))
                 throw new Exception("Server error : " + reply.getStringArg(0));
 
+            // Unknown command
             if (!reply.is("MESSAGE_ACK"))
                 throw new Exception("Invalid reply : " + reply.getCommand());
 
-            // Get encoded message
-            System.out.println("[ V1 ] Received reply");
-            codedMessage = this.symmetricCrypterV1.decryptString(reply.getArg(0));
+            System.out.println("[ OK ] Coded message encrypted received");
 
-            System.out.println("[ V1 ] Decrypted message : " + codedMessage);
-            System.out.println("[ V1 ] Real message is : " +
-                this.interpreterProperties.getProperty(codedMessage, "UNKNOW"));
+            // Get encoded message from the reply
+            codedMessage = this.symmetricCrypter.decryptString(reply.getArg(0));
+            System.out.println("[ OK ] Coded message : " + codedMessage);
+            System.out.println("[ OK ] Real meaning  : " +
+               this.interpreterProperties.getProperty(codedMessage, "UNKNOWN"));
         }
-        catch (Exception e)
+        catch (Exception exception)
         {
-            System.out.println("[ V1 ] " + e.getMessage());
-            MessageBoxes.ShowError(e.getMessage(), "Error sending message");
+            System.out.println("[FAIL] " + exception.getMessage());
+            MessageBoxes.ShowError(exception.getMessage(),
+                                   "Error sending message");
         }
-    }//GEN-LAST:event_buttonSendMessageV1ActionPerformed
+    }//GEN-LAST:event_buttonSendMessageActionPerformed
 
-    private void buttonGenerateKeyV1ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateKeyV1ActionPerformed
-    {//GEN-HEADEREND:event_buttonGenerateKeyV1ActionPerformed
-        this.generateSecretKeyV1();
-    }//GEN-LAST:event_buttonGenerateKeyV1ActionPerformed
-
-    private void buttonSendMessageV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonSendMessageV2ActionPerformed
-    {//GEN-HEADEREND:event_buttonSendMessageV2ActionPerformed
-        try
-        {
-            // Check if client is connected
-            if (this.sockV2 == null || !this.sockV2.isConnected())
-            throw new Exception("You are disconnected from server");
-
-            // Check if ciphers exist
-            if (this.symmetricCrypterV2 == null)
-            throw new Exception("No crypter object available");
-
-            // Check if secretKey and ciphers exist
-            if (!this.symmetricCrypterV2.isValid())
-            throw new Exception("A new secret key must be generated");
-
-            // Get coded message
-            String codedMessage = (String)this.comboBoxMessageV2.getSelectedItem();
-            if (codedMessage == null || codedMessage.isEmpty())
-            throw new Exception("Unable to send empty message");
-
-            // Encrypt coded message
-            byte[] cipherTextByteArray = this.symmetricCrypterV2.encrypt(codedMessage);
-
-            // Send new MESSAGE query
-            Request query = new Request("MESSAGE");
-            query.addArg(cipherTextByteArray);
-            System.out.println("[ V2 ] Encrypted message sent");
-            Request reply = query.sendAndRecv(this.sockV2);
-
-            // If client has been disconected
-            if (reply.is("NO_COMMAND"))
-            {
-                this.disconnectFromServerV2();
-                throw new Exception("Disconnected from server");
-            }
-
-            // If query failed
-            if (reply.is("MESSAGE_FAIL"))
-            throw new Exception("Server error : " + reply.getStringArg(0));
-
-            if (!reply.is("MESSAGE_ACK"))
-            throw new Exception("Invalid reply : " + reply.getCommand());
-
-            // Get encoded message
-            System.out.println("[ V2 ] Received reply");
-            codedMessage = this.symmetricCrypterV2.decryptString(reply.getArg(0));
-
-            System.out.println("[ V2 ] Decrypted message : " + codedMessage);
-            System.out.println("[ V2 ] Real message is : " +
-                this.interpreterProperties.getProperty(codedMessage, "UNKNOW"));
-        }
-        catch (Exception e)
-        {
-            System.out.println("[ V2 ] " + e.getMessage());
-            MessageBoxes.ShowError(e.getMessage(), "Error sending message");
-        }
-    }//GEN-LAST:event_buttonSendMessageV2ActionPerformed
-
-    private void buttonGenerateKeyV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateKeyV2ActionPerformed
-    {//GEN-HEADEREND:event_buttonGenerateKeyV2ActionPerformed
-        this.generateSecretKeyV2();
-    }//GEN-LAST:event_buttonGenerateKeyV2ActionPerformed
-
-    private void buttonConnectV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonConnectV2ActionPerformed
-    {//GEN-HEADEREND:event_buttonConnectV2ActionPerformed
-        if (this.isConnectedV2)
-        this.disconnectFromServerV2();
-        else
-        this.connectToServerV2();
-    }//GEN-LAST:event_buttonConnectV2ActionPerformed
+    private void buttonClearActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonClearActionPerformed
+    {//GEN-HEADEREND:event_buttonClearActionPerformed
+        this.textAreaOutput.setText(null);
+    }//GEN-LAST:event_buttonClearActionPerformed
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Main">
@@ -829,7 +614,8 @@ public class MainFrame extends javax.swing.JFrame
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         try
         {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels())
+            for (javax.swing.UIManager.LookAndFeelInfo info :
+                    javax.swing.UIManager.getInstalledLookAndFeels())
             {
                 if ("Nimbus".equals(info.getName()))
                 {
@@ -839,7 +625,7 @@ public class MainFrame extends javax.swing.JFrame
             }
         }
         catch (ClassNotFoundException | InstantiationException |
-            IllegalAccessException | UnsupportedLookAndFeelException ex)
+                IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex)
         {
             System.err.println(ex);
         }
@@ -856,39 +642,23 @@ public class MainFrame extends javax.swing.JFrame
     //<editor-fold defaultstate="collapsed" desc="Generated Widgets">
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton buttonClear;
-    private javax.swing.JButton buttonConnectV1;
-    private javax.swing.JButton buttonConnectV2;
-    private javax.swing.JButton buttonGenerateKeyV1;
-    private javax.swing.JButton buttonGenerateKeyV2;
-    private javax.swing.JButton buttonSendMessageV1;
-    private javax.swing.JButton buttonSendMessageV2;
-    private javax.swing.JComboBox comboBoxMessageV1;
-    private javax.swing.JComboBox comboBoxMessageV2;
-    private javax.swing.JLabel labelIPV1;
-    private javax.swing.JLabel labelIPV2;
-    private javax.swing.JLabel labelMessageV1;
-    private javax.swing.JLabel labelPortV1;
-    private javax.swing.JLabel labelPortV2;
-    private javax.swing.JLabel labelStatusInfoV1;
-    private javax.swing.JLabel labelStatusInfoV2;
-    private javax.swing.JLabel labelStatusV1;
-    private javax.swing.JLabel labelStatusV2;
-    private javax.swing.JPanel panelBodyV1;
-    private javax.swing.JPanel panelBodyV2;
-    private javax.swing.JPanel panelHeaderBodyV1;
-    private javax.swing.JPanel panelHeaderBodyV2;
-    private javax.swing.JPanel panelHeaderV1;
-    private javax.swing.JPanel panelHeaderV2;
-    private javax.swing.JPanel panelV1;
-    private javax.swing.JPanel panelV2;
+    private javax.swing.JButton buttonConnect;
+    private javax.swing.JButton buttonGenerateNewSecretKey;
+    private javax.swing.JButton buttonSendMessage;
+    private javax.swing.JComboBox<String> comboBoxMessages;
+    private javax.swing.JLabel labelIPServer;
+    private javax.swing.JLabel labelMessage;
+    private javax.swing.JLabel labelPort;
+    private javax.swing.JLabel labelStatus;
+    private javax.swing.JLabel labelStatusInfo;
+    private javax.swing.JPanel panelBody;
+    private javax.swing.JPanel panelHeader;
+    private javax.swing.JPanel panelHeaderBody;
     private javax.swing.JScrollPane scrollPane;
-    private javax.swing.JSpinner spinnerPortServerV1;
-    private javax.swing.JSpinner spinnerPortServerV2;
+    private javax.swing.JSpinner spinnerPort;
     private javax.swing.JSplitPane splitPane;
-    private javax.swing.JTabbedPane tabbedPane;
     private javax.swing.JTextArea textAreaOutput;
-    private javax.swing.JTextField textFieldIPServerV1;
-    private javax.swing.JTextField textFieldIPServerV2;
+    private javax.swing.JTextField textFieldIP;
     // End of variables declaration//GEN-END:variables
     //</editor-fold>
 
@@ -896,25 +666,16 @@ public class MainFrame extends javax.swing.JFrame
     private Properties interpreterProperties;
     private Properties bibleProperties;
 
-    // Version 1
-    private Socket sockV1;
-    private boolean isConnectedV1;
-    private SymmetricCrypter symmetricCrypterV1;
+    private Socket sock;
+    private boolean isConnected;
+    private SymmetricCrypter symmetricCrypter;
 
-    // Version 2
-    private Socket sockV2;
-    private boolean isConnectedV2;
-    private SymmetricCrypter symmetricCrypterV2;
-
-    // Models
-    private DefaultComboBoxModel messagesModel;
+    private DefaultComboBoxModel<String> messagesModel;
     //</editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Static variables">
-    private static final String DEFAULT_IP_V1;
-    private static final String DEFAULT_PORT_V1;
-    private static final String DEFAULT_IP_V2;
-    private static final String DEFAULT_PORT_V2;
+    private static final String DEFAULT_IP;
+    private static final String DEFAULT_PORT;
 
     private static final String algorithm;
     private static final String cipherMode;
@@ -922,10 +683,8 @@ public class MainFrame extends javax.swing.JFrame
 
     static
     {
-        DEFAULT_IP_V1   = "127.0.0.1";
-        DEFAULT_PORT_V1 = "40000";
-        DEFAULT_IP_V2   = "127.0.0.1";
-        DEFAULT_PORT_V2 = "40001";
+        DEFAULT_IP   = "127.0.0.1";
+        DEFAULT_PORT = "40000";
 
         algorithm  = "DES";
         cipherMode = "ECB";

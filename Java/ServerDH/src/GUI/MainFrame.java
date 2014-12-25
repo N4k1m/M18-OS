@@ -1,13 +1,11 @@
 package GUI;
 
-import Threads.ThreadServerV1;
-import Threads.ThreadServerV2;
+import Threads.ThreadServer;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.io.IOException;
 import java.util.Properties;
-import javax.swing.UnsupportedLookAndFeelException;
 
 /**
  *
@@ -24,79 +22,83 @@ public class MainFrame extends javax.swing.JFrame
         TextAreaOutputStream toas = TextAreaOutputStream.getInstance(
             this.textAreaOutput);
 
+        this.loadDefaultSettings();
+        this.threadServer = null;
+
+        this.showStatus();
+    }
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Private methods">
+    private void loadDefaultSettings()
+    {
         // Load properties file
         try
         {
             String path = System.getProperty("user.dir");
-            path += System.getProperty("file.separator")
-                    + "src"
-                    + System.getProperty("file.separator")
-                    + "GUI"
-                    + System.getProperty("file.separator")
-                    + "config.properties";
+            path += System.getProperty("file.separator") + "src"
+                 + System.getProperty("file.separator")  + "GUI"
+                 + System.getProperty("file.separator")  + "config.properties";
 
-            this.prop = PropertyLoader.load(path);
+            Properties prop = PropertyLoader.load(path);
 
             // Set the default port servers
-            this.spinnerPortV1.setValue(
-                new Integer(this.prop.getProperty(
-                    "port_server_v1", DEFAULT_PORT_V1)));
-            this.spinnerPortV2.setValue(
-                new Integer(this.prop.getProperty(
-                    "port_server_v2", DEFAULT_PORT_V2)));
+            this.spinnerPort.setValue(
+                new Integer(prop.getProperty(
+                    "port_server", DEFAULT_PORT)));
 
-            System.out.println("[ OK ] Configuration settings : loaded");
+            System.out.println("[ OK ] Default settings loaded");
         }
         catch (IOException ex)
         {
             System.err.println(ex);
         }
-        finally
+    }
+
+    private void showStatus()
+    {
+        this.isRunning = this.threadServer != null &&
+                         this.threadServer.isAlive();
+
+        this.spinnerPort.setEnabled(!this.isRunning);
+
+        if (this.isRunning)
         {
-            this.threadServerV1 = null;
-            this.threadServerV2 = null;
-            this.showStatusV1();
-            this.showStatusV2();
+            this.labelStatus.setForeground(Color.GREEN);
+            this.labelStatus.setText("Server is running");
+            this.buttonStartStop.setText("Stop");
+        }
+        else
+        {
+            this.labelStatus.setForeground(Color.RED);
+            this.labelStatus.setText("Server stopped");
+            this.buttonStartStop.setText("Start");
         }
     }
-    //</editor-fold>
 
-    //<editor-fold defaultstate="collapsed" desc="Private methods">
-    private void startServerV1()
+    private void startServer()
     {
-        if (this.threadServerV1 != null)
-            this.stopServerV1();
+        if (this.threadServer != null)
+            this.stopServer();
 
         // Start thread
-        int port = (int)this.spinnerPortV1.getValue();
-        this.threadServerV1 = new ThreadServerV1(port);
-        this.threadServerV1.start();
-        this.showStatusV1();
+        int port = (int)this.spinnerPort.getValue();
+        this.threadServer = new ThreadServer(port);
+        this.threadServer.start();
+        this.showStatus();
     }
 
-    private void startServerV2()
+    private void stopServer()
     {
-        if (this.threadServerV2 != null)
-            this.stopServerV2();
-
-        // Start thread
-        int port = (int)this.spinnerPortV2.getValue();
-        this.threadServerV2 = new ThreadServerV2(port);
-        this.threadServerV2.start();
-        this.showStatusV2();
-    }
-
-    private void stopServerV1()
-    {
-        if (this.threadServerV1 == null)
+        if (this.threadServer == null)
             return;
 
         try
         {
             // Stop thread
-            this.threadServerV1.requestStop();
-            this.threadServerV1.join();
-            this.threadServerV1 = null;
+            this.threadServer.requestStop();
+            this.threadServer.join();
+            this.threadServer = null;
         }
         catch (IOException | InterruptedException ex)
         {
@@ -104,71 +106,7 @@ public class MainFrame extends javax.swing.JFrame
         }
         finally
         {
-            this.showStatusV1();
-        }
-    }
-
-    private void stopServerV2()
-    {
-        if (this.threadServerV2 == null)
-            return;
-
-        try
-        {
-            // Stop thread
-            this.threadServerV2.requestStop();
-            this.threadServerV2.join();
-            this.threadServerV2 = null;
-        }
-        catch (IOException | InterruptedException ex)
-        {
-            System.err.println(ex);
-        }
-        finally
-        {
-            this.showStatusV2();
-        }
-    }
-
-    private void showStatusV1()
-    {
-        this.isRunningV1 = this.threadServerV1 != null &&
-                           this.threadServerV1.isAlive();
-
-        this.spinnerPortV1.setEnabled(!this.isRunningV1);
-
-        if (this.isRunningV1)
-        {
-            this.labelStatusV1.setForeground(Color.GREEN);
-            this.labelStatusV1.setText("Server is running");
-            this.buttonStartStopV1.setText("Stop");
-        }
-        else
-        {
-            this.labelStatusV1.setForeground(Color.RED);
-            this.labelStatusV1.setText("Server stopped");
-            this.buttonStartStopV1.setText("Start");
-        }
-    }
-
-    private void showStatusV2()
-    {
-        this.isRunningV2 = this.threadServerV2 != null &&
-                           this.threadServerV2.isAlive();
-
-        this.spinnerPortV2.setEnabled(!this.isRunningV2);
-
-        if (this.isRunningV2)
-        {
-            this.labelStatusV2.setForeground(Color.GREEN);
-            this.labelStatusV2.setText("Server is running");
-            this.buttonStartStopV2.setText("Stop");
-        }
-        else
-        {
-            this.labelStatusV2.setForeground(Color.RED);
-            this.labelStatusV2.setText("Server stopped");
-            this.buttonStartStopV2.setText("Start");
+            this.showStatus();
         }
     }
     //</editor-fold>
@@ -176,25 +114,17 @@ public class MainFrame extends javax.swing.JFrame
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents()
     {
-        java.awt.GridBagConstraints gridBagConstraints;
 
         buttonClear = new javax.swing.JButton();
-        splitPane = new javax.swing.JSplitPane();
+        panelHeader = new javax.swing.JPanel();
+        buttonStartStop = new javax.swing.JButton();
+        panelHeaderBody = new javax.swing.JPanel();
+        labelStatusInfo = new javax.swing.JLabel();
+        labelStatus = new javax.swing.JLabel();
+        labelPort = new javax.swing.JLabel();
+        spinnerPort = new javax.swing.JSpinner();
         scrollPane = new javax.swing.JScrollPane();
         textAreaOutput = new javax.swing.JTextArea();
-        tabbedPane = new javax.swing.JTabbedPane();
-        panelV1 = new javax.swing.JPanel();
-        labelStatusInfoV1 = new javax.swing.JLabel();
-        labelStatusV1 = new javax.swing.JLabel();
-        labelPortV1 = new javax.swing.JLabel();
-        spinnerPortV1 = new javax.swing.JSpinner();
-        buttonStartStopV1 = new javax.swing.JButton();
-        panelV2 = new javax.swing.JPanel();
-        labelStatusInfoV2 = new javax.swing.JLabel();
-        labelStatusV2 = new javax.swing.JLabel();
-        labelPortV2 = new javax.swing.JLabel();
-        spinnerPortV2 = new javax.swing.JSpinner();
-        buttonStartStopV2 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Server Diffie Hellman");
@@ -209,151 +139,58 @@ public class MainFrame extends javax.swing.JFrame
         });
         getContentPane().add(buttonClear, java.awt.BorderLayout.PAGE_END);
 
-        splitPane.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
+        panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panelHeader.setLayout(new java.awt.BorderLayout());
 
-        textAreaOutput.setColumns(20);
-        textAreaOutput.setRows(5);
+        buttonStartStop.setText("<state>");
+        buttonStartStop.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonStartStopActionPerformed(evt);
+            }
+        });
+        panelHeader.add(buttonStartStop, java.awt.BorderLayout.LINE_END);
+
+        panelHeaderBody.setLayout(new java.awt.GridLayout(2, 2, 0, 5));
+
+        labelStatusInfo.setText("Status:");
+        panelHeaderBody.add(labelStatusInfo);
+
+        labelStatus.setText("<status>");
+        panelHeaderBody.add(labelStatus);
+
+        labelPort.setText("Listening port :");
+        panelHeaderBody.add(labelPort);
+
+        spinnerPort.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
+        panelHeaderBody.add(spinnerPort);
+
+        panelHeader.add(panelHeaderBody, java.awt.BorderLayout.CENTER);
+
+        getContentPane().add(panelHeader, java.awt.BorderLayout.PAGE_START);
+
         scrollPane.setViewportView(textAreaOutput);
 
-        splitPane.setBottomComponent(scrollPane);
-
-        panelV1.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        java.awt.GridBagLayout panelV1Layout = new java.awt.GridBagLayout();
-        panelV1Layout.columnWidths = new int[] {0, 5, 0, 5, 0};
-        panelV1Layout.rowHeights = new int[] {0, 5, 0};
-        panelV1.setLayout(panelV1Layout);
-
-        labelStatusInfoV1.setText("Status :");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.3;
-        panelV1.add(labelStatusInfoV1, gridBagConstraints);
-
-        labelStatusV1.setText("<status>");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.3;
-        panelV1.add(labelStatusV1, gridBagConstraints);
-
-        labelPortV1.setText("Listening port :");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        panelV1.add(labelPortV1, gridBagConstraints);
-
-        spinnerPortV1.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        panelV1.add(spinnerPortV1, gridBagConstraints);
-
-        buttonStartStopV1.setText("Start");
-        buttonStartStopV1.addActionListener(new java.awt.event.ActionListener()
-        {
-            public void actionPerformed(java.awt.event.ActionEvent evt)
-            {
-                buttonStartStopV1ActionPerformed(evt);
-            }
-        });
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 4;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.gridheight = 3;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
-        gridBagConstraints.weightx = 0.1;
-        panelV1.add(buttonStartStopV1, gridBagConstraints);
-
-        tabbedPane.addTab("Version 1 - Secret word", panelV1);
-
-        panelV2.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        java.awt.GridBagLayout panelV2Layout = new java.awt.GridBagLayout();
-        panelV2Layout.columnWidths = new int[] {0, 5, 0, 5, 0};
-        panelV2Layout.rowHeights = new int[] {0, 5, 0};
-        panelV2.setLayout(panelV2Layout);
-
-        labelStatusInfoV2.setText("Status :");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.3;
-        panelV2.add(labelStatusInfoV2, gridBagConstraints);
-
-        labelStatusV2.setText("<status>");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.3;
-        panelV2.add(labelStatusV2, gridBagConstraints);
-
-        labelPortV2.setText("Listening port :");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        panelV2.add(labelPortV2, gridBagConstraints);
-
-        spinnerPortV2.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        panelV2.add(spinnerPortV2, gridBagConstraints);
-
-        buttonStartStopV2.setText("Start");
-        buttonStartStopV2.addActionListener(new java.awt.event.ActionListener()
-        {
-            public void actionPerformed(java.awt.event.ActionEvent evt)
-            {
-                buttonStartStopV2ActionPerformed(evt);
-            }
-        });
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 4;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.gridheight = 3;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
-        gridBagConstraints.weightx = 0.1;
-        panelV2.add(buttonStartStopV2, gridBagConstraints);
-
-        tabbedPane.addTab("Version 2 - Diffie Hellman", panelV2);
-
-        splitPane.setLeftComponent(tabbedPane);
-
-        getContentPane().add(splitPane, java.awt.BorderLayout.CENTER);
+        getContentPane().add(scrollPane, java.awt.BorderLayout.CENTER);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     //<editor-fold defaultstate="collapsed" desc="Events management">
-    private void buttonStartStopV1ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonStartStopV1ActionPerformed
-    {//GEN-HEADEREND:event_buttonStartStopV1ActionPerformed
-        if (this.isRunningV1)
-            this.stopServerV1();
+    private void buttonStartStopActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonStartStopActionPerformed
+    {//GEN-HEADEREND:event_buttonStartStopActionPerformed
+        if (this.isRunning)
+            this.stopServer();
         else
-            this.startServerV1();
-    }//GEN-LAST:event_buttonStartStopV1ActionPerformed
+            this.startServer();
+    }//GEN-LAST:event_buttonStartStopActionPerformed
 
     private void buttonClearActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonClearActionPerformed
     {//GEN-HEADEREND:event_buttonClearActionPerformed
         this.textAreaOutput.setText(null);
     }//GEN-LAST:event_buttonClearActionPerformed
-
-    private void buttonStartStopV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonStartStopV2ActionPerformed
-    {//GEN-HEADEREND:event_buttonStartStopV2ActionPerformed
-        if (this.isRunningV2)
-            this.stopServerV2();
-        else
-            this.startServerV2();
-    }//GEN-LAST:event_buttonStartStopV2ActionPerformed
-    // </editor-fold>
+    //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Main">
     public static void main(String args[])
@@ -371,7 +208,8 @@ public class MainFrame extends javax.swing.JFrame
             }
         }
         catch (ClassNotFoundException | InstantiationException |
-                IllegalAccessException | UnsupportedLookAndFeelException ex)
+                IllegalAccessException |
+            javax.swing.UnsupportedLookAndFeelException ex)
         {
             System.err.println(ex);
         }
@@ -388,41 +226,29 @@ public class MainFrame extends javax.swing.JFrame
     //<editor-fold defaultstate="collapsed" desc="Generated Widgets">
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton buttonClear;
-    private javax.swing.JButton buttonStartStopV1;
-    private javax.swing.JButton buttonStartStopV2;
-    private javax.swing.JLabel labelPortV1;
-    private javax.swing.JLabel labelPortV2;
-    private javax.swing.JLabel labelStatusInfoV1;
-    private javax.swing.JLabel labelStatusInfoV2;
-    private javax.swing.JLabel labelStatusV1;
-    private javax.swing.JLabel labelStatusV2;
-    private javax.swing.JPanel panelV1;
-    private javax.swing.JPanel panelV2;
+    private javax.swing.JButton buttonStartStop;
+    private javax.swing.JLabel labelPort;
+    private javax.swing.JLabel labelStatus;
+    private javax.swing.JLabel labelStatusInfo;
+    private javax.swing.JPanel panelHeader;
+    private javax.swing.JPanel panelHeaderBody;
     private javax.swing.JScrollPane scrollPane;
-    private javax.swing.JSpinner spinnerPortV1;
-    private javax.swing.JSpinner spinnerPortV2;
-    private javax.swing.JSplitPane splitPane;
-    private javax.swing.JTabbedPane tabbedPane;
+    private javax.swing.JSpinner spinnerPort;
     private javax.swing.JTextArea textAreaOutput;
     // End of variables declaration//GEN-END:variables
     //</editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Private variables">
-    private Properties prop;
-    private boolean isRunningV1;
-    private boolean isRunningV2;
-    private ThreadServerV1 threadServerV1;
-    private ThreadServerV2 threadServerV2;
+    private boolean isRunning;
+    private ThreadServer threadServer;
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Static variables">
-    private static final String DEFAULT_PORT_V1;
-    private static final String DEFAULT_PORT_V2;
+    private static final String DEFAULT_PORT;
 
     static
     {
-        DEFAULT_PORT_V1 = "40000";
-        DEFAULT_PORT_V2 = "40001";
+        DEFAULT_PORT = "40000";
     }
     // </editor-fold>
 }
