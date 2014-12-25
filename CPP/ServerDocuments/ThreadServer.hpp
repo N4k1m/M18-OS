@@ -26,12 +26,15 @@ class ThreadServer : public QThread
         explicit ThreadServer(int port, QObject *parent = 0);
         ~ThreadServer(void);
 
+    public slots:
+
+        void requestStop();
+
     signals:
 
-        void serverRunning(bool running);
         void message(const QString& msg);
 
-    public slots:
+    protected:
 
         void run();
 
@@ -43,6 +46,8 @@ class ThreadServer : public QThread
 
         void sendFAILMessage(const std::string& cause);
 
+        bool stopRequested();
+
     private:
 
         GDOCP protocolManager;
@@ -51,7 +56,11 @@ class ThreadServer : public QThread
         int _port;
         TCPSocketServer* server_socket;
         TCPSocketClient* client_socket;
+
         bool client_connected;
+
+        QMutex mutex;
+        bool _stopRequested; // Protected by mutex
 };
 
-#endif // THREADSERVEUR_HPP
+#endif // __THREADSERVEUR_HPP__

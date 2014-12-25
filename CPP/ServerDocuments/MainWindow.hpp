@@ -27,6 +27,9 @@ class MainWindow : public QWidget
         void setWidgetsEnable(bool serverRunning);
         void displayMessage(const QString& msg);
 
+        void threadServerStarted();
+        void threadServerFinished();
+
         // Auto-connect private slots
         void on_pushButtonStart_clicked(void);
         void on_pushButtonStop_clicked(void);
@@ -37,4 +40,4 @@ class MainWindow : public QWidget
         ThreadServer* _threadServeur;
 };
 
-#endif // MAINWINDOW_HPP
+#endif /* __MAINWINDOW_HPP__ */
