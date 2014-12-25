@@ -16,7 +16,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.Properties;
-import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JFileChooser;
 import javax.swing.SpinnerListModel;
@@ -83,14 +82,14 @@ public class MainFrame extends javax.swing.JFrame
         this.AESKeyLengthSpinnerModel = new SpinnerListModel(
             new Integer[]{128, 192, 256});
 
-        this.cipherProvidersModel = new DefaultComboBoxModel(
+        this.cipherProvidersModel = new DefaultComboBoxModel<>(
             new String[] {"AlbertiFamily", "Triumvirat",
                           "ProCrypto", "CryptoCBCAESProvider"});
 
-        this.authenticationProvidersModels = new DefaultComboBoxModel(
+        this.authenticationProvidersModels = new DefaultComboBoxModel<>(
             new String[]{"HMACSHA1MawetProvider"});
 
-        this.algorithmModel = new DefaultComboBoxModel(
+        this.algorithmModel = new DefaultComboBoxModel<>(
             new String[] {"DES", "AES"});
 
         // Apply models to widgets
@@ -286,15 +285,15 @@ public class MainFrame extends javax.swing.JFrame
         tabbedPane = new javax.swing.JTabbedPane();
         panelGenerateCipherKey = new javax.swing.JPanel();
         labelCipherProvider = new javax.swing.JLabel();
-        comboBoxCipherProviders = new javax.swing.JComboBox();
+        comboBoxCipherProviders = new javax.swing.JComboBox<String>();
         labelCipherKeyLength = new javax.swing.JLabel();
         spinnerCipherKeyLength = new javax.swing.JSpinner();
         buttonGenerateCipherKey = new javax.swing.JButton();
         panelGenerateAuthenticationKey = new javax.swing.JPanel();
         labelAuthenticationProvider = new javax.swing.JLabel();
-        comboBoxAuthenticationProviders = new javax.swing.JComboBox();
+        comboBoxAuthenticationProviders = new javax.swing.JComboBox<String>();
         labelAlgorithm = new javax.swing.JLabel();
-        comboBoxAlgorithms = new javax.swing.JComboBox();
+        comboBoxAlgorithms = new javax.swing.JComboBox<String>();
         labelSecretMessage = new javax.swing.JLabel();
         textFieldSecretMessage = new javax.swing.JTextField();
         buttonGenerateAuthenticationKey = new javax.swing.JButton();
@@ -552,9 +551,9 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JButton buttonGenerateAuthenticationKey;
     private javax.swing.JButton buttonGenerateCipherKey;
     private javax.swing.JButton buttonStartStop;
-    private javax.swing.JComboBox comboBoxAlgorithms;
-    private javax.swing.JComboBox comboBoxAuthenticationProviders;
-    private javax.swing.JComboBox comboBoxCipherProviders;
+    private javax.swing.JComboBox<String> comboBoxAlgorithms;
+    private javax.swing.JComboBox<String> comboBoxAuthenticationProviders;
+    private javax.swing.JComboBox<String> comboBoxCipherProviders;
     private javax.swing.JLabel labelAlgorithm;
     private javax.swing.JLabel labelAuthenticationProvider;
     private javax.swing.JLabel labelCipherKeyLength;
@@ -587,9 +586,9 @@ public class MainFrame extends javax.swing.JFrame
     private SpinnerListModel DESkeyLengthSpinnerModel;
     private SpinnerListModel AESKeyLengthSpinnerModel;
 
-    private ComboBoxModel cipherProvidersModel;
-    private ComboBoxModel authenticationProvidersModels;
-    private ComboBoxModel algorithmModel;
+    private DefaultComboBoxModel<String> cipherProvidersModel;
+    private DefaultComboBoxModel<String> authenticationProvidersModels;
+    private DefaultComboBoxModel<String> algorithmModel;
 
     private Chiffrement chiffrement;
     private Cle cle;
