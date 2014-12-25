@@ -207,7 +207,7 @@ public class ThreadServerV2 extends Thread
         }
     }
 
-     private void generateSecretKey()
+    private void generateSecretKey()
     {
         System.out.println("[ V2 ] Generate new secret key");
 

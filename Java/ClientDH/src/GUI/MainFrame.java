@@ -750,39 +750,26 @@ public class MainFrame extends javax.swing.JFrame
         this.generateSecretKeyV1();
     }//GEN-LAST:event_buttonGenerateKeyV1ActionPerformed
 
-    private void buttonConnectV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonConnectV2ActionPerformed
-    {//GEN-HEADEREND:event_buttonConnectV2ActionPerformed
-        if (this.isConnectedV2)
-            this.disconnectFromServerV2();
-        else
-            this.connectToServerV2();
-    }//GEN-LAST:event_buttonConnectV2ActionPerformed
-
-    private void buttonGenerateKeyV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateKeyV2ActionPerformed
-    {//GEN-HEADEREND:event_buttonGenerateKeyV2ActionPerformed
-        this.generateSecretKeyV2();
-    }//GEN-LAST:event_buttonGenerateKeyV2ActionPerformed
-
     private void buttonSendMessageV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonSendMessageV2ActionPerformed
     {//GEN-HEADEREND:event_buttonSendMessageV2ActionPerformed
         try
         {
             // Check if client is connected
             if (this.sockV2 == null || !this.sockV2.isConnected())
-                throw new Exception("You are disconnected from server");
+            throw new Exception("You are disconnected from server");
 
             // Check if ciphers exist
             if (this.symmetricCrypterV2 == null)
-                throw new Exception("No crypter object available");
+            throw new Exception("No crypter object available");
 
             // Check if secretKey and ciphers exist
             if (!this.symmetricCrypterV2.isValid())
-                throw new Exception("A new secret key must be generated");
+            throw new Exception("A new secret key must be generated");
 
             // Get coded message
             String codedMessage = (String)this.comboBoxMessageV2.getSelectedItem();
             if (codedMessage == null || codedMessage.isEmpty())
-                throw new Exception("Unable to send empty message");
+            throw new Exception("Unable to send empty message");
 
             // Encrypt coded message
             byte[] cipherTextByteArray = this.symmetricCrypterV2.encrypt(codedMessage);
@@ -802,10 +789,10 @@ public class MainFrame extends javax.swing.JFrame
 
             // If query failed
             if (reply.is("MESSAGE_FAIL"))
-                throw new Exception("Server error : " + reply.getStringArg(0));
+            throw new Exception("Server error : " + reply.getStringArg(0));
 
             if (!reply.is("MESSAGE_ACK"))
-                throw new Exception("Invalid reply : " + reply.getCommand());
+            throw new Exception("Invalid reply : " + reply.getCommand());
 
             // Get encoded message
             System.out.println("[ V2 ] Received reply");
@@ -821,6 +808,19 @@ public class MainFrame extends javax.swing.JFrame
             MessageBoxes.ShowError(e.getMessage(), "Error sending message");
         }
     }//GEN-LAST:event_buttonSendMessageV2ActionPerformed
+
+    private void buttonGenerateKeyV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonGenerateKeyV2ActionPerformed
+    {//GEN-HEADEREND:event_buttonGenerateKeyV2ActionPerformed
+        this.generateSecretKeyV2();
+    }//GEN-LAST:event_buttonGenerateKeyV2ActionPerformed
+
+    private void buttonConnectV2ActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonConnectV2ActionPerformed
+    {//GEN-HEADEREND:event_buttonConnectV2ActionPerformed
+        if (this.isConnectedV2)
+        this.disconnectFromServerV2();
+        else
+        this.connectToServerV2();
+    }//GEN-LAST:event_buttonConnectV2ActionPerformed
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Main">

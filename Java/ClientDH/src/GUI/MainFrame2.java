@@ -108,12 +108,9 @@ public class MainFrame2 extends javax.swing.JFrame
         try
         {
             String path = System.getProperty("user.dir");
-            path += System.getProperty("file.separator")
-                    + "src"
-                    + System.getProperty("file.separator")
-                    + "GUI"
-                    + System.getProperty("file.separator")
-                    + "config.properties";
+            path += System.getProperty("file.separator") + "src"
+                 + System.getProperty("file.separator")  + "GUI"
+                 + System.getProperty("file.separator")  + "config.properties";
 
             Properties propConfig = PropertyLoader.load(path);
 
@@ -275,12 +272,12 @@ public class MainFrame2 extends javax.swing.JFrame
             System.out.println("[ V1 ] bible line " + bibleLineNumber
                 + " = " + bibleLine);
 
-            // generate new secret key
+            // Generate new secret key
             SecretKey newSecretKey = new SecretKeySpec(
                 bibleLine.substring(bibleLineNumber,bibleLineNumber + 8)
                     .getBytes(), algorithm);
 
-            // initialize ciphers
+            // Initialize crypter
             this.symmetricCrypter.init(newSecretKey);
 
             System.out.println("[ V1 ] New secret key generated");
@@ -362,7 +359,7 @@ public class MainFrame2 extends javax.swing.JFrame
             ka.doPhase(publicKey, true);
 
             // Generate new secret key and initialize crypter
-            this.symmetricCrypter.init(ka.generateSecret("DES"));
+            this.symmetricCrypter.init(ka.generateSecret(algorithm));
 
             System.out.println("[ V2 ] New secret key generated");
         }
