@@ -22,6 +22,10 @@ class MainWindow : public QWidget
         explicit MainWindow(QWidget* parent = NULL);
         virtual ~MainWindow(void);
 
+    private:
+
+        void stopServer();
+
     private slots:
 
         void setWidgetsEnable(bool serverRunning);

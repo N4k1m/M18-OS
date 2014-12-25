@@ -24,10 +24,16 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
-        this->_threadServeur->quit();
+        this->stopServer();
 
     delete this->_threadServeur;
     delete this->ui;
+}
+
+void MainWindow::stopServer()
+{
+    this->_threadServeur->requestStop();
+    this->_threadServeur->wait();
 }
 
 void MainWindow::displayMessage(const QString& msg)
@@ -61,10 +67,7 @@ void MainWindow::on_pushButtonStart_clicked()
 {
     // Server is running
     if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
-    {
-        this->_threadServeur->requestStop();
-        this->_threadServeur->wait();
-    }
+        this->stopServer();
 
     this->_threadServeur = new ThreadServer(this->ui->spinBoxPort->value(), 0);
 
@@ -88,6 +91,5 @@ void MainWindow::setWidgetsEnable(bool serverRunning)
 
 void MainWindow::on_pushButtonStop_clicked()
 {
-    this->_threadServeur->requestStop();
-    this->_threadServeur->wait();
+    this->stopServer();
 }
