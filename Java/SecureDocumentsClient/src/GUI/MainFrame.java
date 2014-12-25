@@ -64,7 +64,7 @@ public class MainFrame extends javax.swing.JFrame
             System.err.println(ex);
         }
 
-        // Creates models
+        // Create models
         this.createModels();
 
         // Hide tab
