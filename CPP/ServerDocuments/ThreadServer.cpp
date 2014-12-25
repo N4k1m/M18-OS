@@ -109,8 +109,7 @@ void ThreadServer::manageLOGIN(void)
     // Create query object (LOGIN ACK)
     protocolManager.setCommand(GDOCP::LOGIN);
     protocolManager.clearHeaders();
-    std::string tmp_str = static_cast<std::ostringstream*>(
-                &(std::ostringstream() << nonce))->str();
+    std::string tmp_str = std::to_string(nonce);
     protocolManager.setHeaderValue("nonce", tmp_str);
 
     // Send query (LOGIN ACK)

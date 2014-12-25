@@ -310,11 +310,9 @@ bool Widget::login(void)
     // Build query
     protocolManager.setCommand(GDOCP::LOGIN);
     protocolManager.clearHeaders();
-    tmp_str = static_cast<std::ostringstream*>(
-                &(std::ostringstream() << cnonce))->str();
+    tmp_str = std::to_string(cnonce); // C++11
     protocolManager.setHeaderValue("cnonce", tmp_str);
-    tmp_str = static_cast<std::ostringstream*>(
-                &(std::ostringstream() << hash_passwd))->str();
+    tmp_str = std::to_string(hash_passwd); // C++11
     protocolManager.setHeaderValue("hashpassword", tmp_str);
 
     tmp_str = protocolManager.generateQuery();
