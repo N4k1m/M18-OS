@@ -16,7 +16,6 @@ import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Properties;
-import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 
 /**
@@ -78,13 +77,13 @@ public class MainFrame extends javax.swing.JFrame
     //<editor-fold defaultstate="collapsed" desc="Private methods">
     private void createModels()
     {
-        this.chiffrementProvidersModel = new DefaultComboBoxModel(
+        this.chiffrementProvidersModel = new DefaultComboBoxModel<>(
             new String[] {"AlbertiFamily", "Triumvirat", "ProCrypto", "CryptoCBCAESProvider"});
 
-        this.AuthenticationProvidersModels = new DefaultComboBoxModel(
+        this.AuthenticationProvidersModels = new DefaultComboBoxModel<>(
             new String[]{"HMACSHA1MawetProvider"});
 
-        this.IntegrityProvidersModel = new DefaultComboBoxModel(
+        this.IntegrityProvidersModel = new DefaultComboBoxModel<>(
             new String[]{"SHA1MawetProvider"});
 
         // Application des modèles aux widgets
@@ -151,13 +150,13 @@ public class MainFrame extends javax.swing.JFrame
 
         System.out.println("[ OK ] Connexion etablie");
 
-        this.buttonConnect.setText("Déconnexion");
+        this.buttonConnect.setText("Disconnect");
         this.isConnected = true;
     }
 
     private void disconnectFromServer()
     {
-        this.buttonConnect.setText("Conexion");
+        this.buttonConnect.setText("Connect");
         this.isConnected = false;
 
         if (this.sock == null)
@@ -201,17 +200,17 @@ public class MainFrame extends javax.swing.JFrame
         textFieldDocumentName = new javax.swing.JTextField();
         checkBoxEncrypt = new javax.swing.JCheckBox();
         labelCipherProvider = new javax.swing.JLabel();
-        comboBoxCipherProviders = new javax.swing.JComboBox();
+        comboBoxCipherProviders = new javax.swing.JComboBox<String>();
         labelCipherKey = new javax.swing.JLabel();
         textFieldCipherKeyName = new javax.swing.JTextField();
         checkBoxAuthentication = new javax.swing.JCheckBox();
         labelAuthenticationProvider = new javax.swing.JLabel();
-        comboBoxAuthenticationProviders = new javax.swing.JComboBox();
+        comboBoxAuthenticationProviders = new javax.swing.JComboBox<String>();
         labelAuthenticationKey = new javax.swing.JLabel();
         textFieldAuthenticationKeyName = new javax.swing.JTextField();
         checkBoxIntegrity = new javax.swing.JCheckBox();
         labelIntegrityProvider = new javax.swing.JLabel();
-        comboBoxIntegrityProviders = new javax.swing.JComboBox();
+        comboBoxIntegrityProviders = new javax.swing.JComboBox<String>();
         buttonGetDocument = new javax.swing.JButton();
         scrollPane = new javax.swing.JScrollPane();
         textAreaOutput = new javax.swing.JTextArea();
@@ -232,7 +231,7 @@ public class MainFrame extends javax.swing.JFrame
         spinnerPortServer.setPreferredSize(new java.awt.Dimension(100, 28));
         panelHeader.add(spinnerPortServer);
 
-        buttonConnect.setText("Connect");
+        buttonConnect.setText("<state>");
         buttonConnect.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -526,9 +525,9 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JCheckBox checkBoxAuthentication;
     private javax.swing.JCheckBox checkBoxEncrypt;
     private javax.swing.JCheckBox checkBoxIntegrity;
-    private javax.swing.JComboBox comboBoxAuthenticationProviders;
-    private javax.swing.JComboBox comboBoxCipherProviders;
-    private javax.swing.JComboBox comboBoxIntegrityProviders;
+    private javax.swing.JComboBox<String> comboBoxAuthenticationProviders;
+    private javax.swing.JComboBox<String> comboBoxCipherProviders;
+    private javax.swing.JComboBox<String> comboBoxIntegrityProviders;
     private javax.swing.JLabel labelAuthenticationKey;
     private javax.swing.JLabel labelAuthenticationProvider;
     private javax.swing.JLabel labelCipherKey;
@@ -557,9 +556,9 @@ public class MainFrame extends javax.swing.JFrame
     private boolean isConnected;
 
     // Models
-    private ComboBoxModel chiffrementProvidersModel;
-    private ComboBoxModel IntegrityProvidersModel;
-    private ComboBoxModel AuthenticationProvidersModels;
+    private DefaultComboBoxModel<String> chiffrementProvidersModel;
+    private DefaultComboBoxModel<String> IntegrityProvidersModel;
+    private DefaultComboBoxModel<String> AuthenticationProvidersModels;
 
     private Cle cle;
     private Chiffrement chiffrement;
