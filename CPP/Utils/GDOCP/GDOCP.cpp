@@ -13,6 +13,15 @@ GDOCP::GDOCP(const string &commandDelimiter,
 
 }
 
+GDOCP::GDOCP(GDOCP const& other)
+    : _commandDelimiter(other._commandDelimiter),
+      _headerDelimiter(other._headerDelimiter),
+      _endDelimiter(other._endDelimiter),
+      _command(UNKNOWN)
+{
+
+}
+
 int GDOCP::parseQuery(const string &query)
 {
     // Free map

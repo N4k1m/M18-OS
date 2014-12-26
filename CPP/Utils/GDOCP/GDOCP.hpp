@@ -31,6 +31,7 @@ class GDOCP
                 const std::string& commandDelimiter = DEFAULT_COMMAND_DELIMITER,
                 const std::string& headerDelimiter  = DEFAULT_HEADER_DELIMITER,
                 const std::string& endDelimiter     = DEFAULT_END_DELIMITER);
+        GDOCP(GDOCP const& other);
 
         int parseQuery(const std::string& query);
         std::string generateQuery(void) const;
