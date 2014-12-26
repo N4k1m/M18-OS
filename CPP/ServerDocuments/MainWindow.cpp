@@ -19,7 +19,7 @@ MainWindow::MainWindow(QWidget *parent) :
             this->ui->plainTextEditConsole, SLOT(clear()));
 }
 
-MainWindow::~MainWindow()
+MainWindow::~MainWindow(void)
 {
     if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
         this->stopServer();
@@ -28,7 +28,7 @@ MainWindow::~MainWindow()
     delete this->ui;
 }
 
-void MainWindow::stopServer()
+void MainWindow::stopServer(void)
 {
     this->_threadServeur->requestStop();
     this->_threadServeur->wait();
@@ -39,7 +39,7 @@ void MainWindow::displayMessage(const QString& msg)
     this->ui->plainTextEditConsole->appendPlainText(msg);
 }
 
-void MainWindow::threadServerStarted()
+void MainWindow::threadServerStarted(void)
 {
     // Enable widgets
     this->setWidgetsEnable(true);
@@ -49,7 +49,7 @@ void MainWindow::threadServerStarted()
                          QString::number(this->ui->spinBoxPort->value()));
 }
 
-void MainWindow::threadServerFinished()
+void MainWindow::threadServerFinished(void)
 {
     // Desable widgets
     this->setWidgetsEnable(false);
@@ -61,7 +61,7 @@ void MainWindow::threadServerFinished()
     this->displayMessage("Thread server ended");
 }
 
-void MainWindow::on_pushButtonStart_clicked()
+void MainWindow::on_pushButtonStart_clicked(void)
 {
     // Server is running
     if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
@@ -91,7 +91,7 @@ void MainWindow::setWidgetsEnable(bool serverRunning)
     this->ui->plainTextEditConsole->setEnabled(serverRunning);
 }
 
-void MainWindow::on_pushButtonStop_clicked()
+void MainWindow::on_pushButtonStop_clicked(void)
 {
     this->stopServer();
 }

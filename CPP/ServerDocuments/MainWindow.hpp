@@ -25,15 +25,15 @@ class MainWindow : public QWidget
 
     private:
 
-        void stopServer();
+        void stopServer(void);
 
     private slots:
 
         void setWidgetsEnable(bool serverRunning);
         void displayMessage(const QString& msg);
 
-        void threadServerStarted();
-        void threadServerFinished();
+        void threadServerStarted(void);
+        void threadServerFinished(void);
 
         // Auto-connect private slots
         void on_pushButtonStart_clicked(void);
