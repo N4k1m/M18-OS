@@ -23,12 +23,12 @@ class ThreadServer : public QThread
 
     public:
 
-        explicit ThreadServer(int port, QObject *parent = 0);
-        ~ThreadServer(void);
+        explicit ThreadServer(int port, QObject* parent = NULL);
+        virtual ~ThreadServer(void);
 
     public slots:
 
-        void requestStop();
+        void requestStop(void);
 
     signals:
 
@@ -36,7 +36,7 @@ class ThreadServer : public QThread
 
     protected:
 
-        void run();
+        void run(void);
 
     private:
 
@@ -46,21 +46,21 @@ class ThreadServer : public QThread
 
         void sendFAILMessage(const std::string& cause);
 
-        bool stopRequested();
+        bool stopRequested(void);
 
     private:
 
-        GDOCP protocolManager;
-        RandomPrimeGenerator primeGenerator;
+        GDOCP _protocolManager;
+        RandomPrimeGenerator _primeGenerator;
 
         int _port;
-        TCPSocketServer* server_socket;
-        TCPSocketClient* client_socket;
+        TCPSocketServer* _serverSocket;
+        TCPSocketClient* _clientSocket;
 
-        bool client_connected;
+        bool _clientConnected;
 
-        QMutex mutex;
-        bool _stopRequested; // Protected by mutex
+        QMutex _mutex;
+        bool   _stopRequested; // Protected by _mutex
 };
 
-#endif // __THREADSERVEUR_HPP__
+#endif /* __THREADSERVEUR_HPP__ */
