@@ -6,16 +6,14 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    IniParser configFileParser("server_documents.conf");
+    IniParser parser("server_documents.conf");
 
     // Read port number from config file
-    if (configFileParser.keyExists("port"))
-    {
-        std::istringstream iss(configFileParser.value("port"));
-        int port;
-        iss >> port;
-        this->ui->spinBoxPort->setValue(port);
-    }
+    if (parser.keyExists("port"))
+        this->ui->spinBoxPort->setValue(std::stoi(parser.value("port")));
+
+    if (parser.keyExists("threads_client"))
+        this->ui->spinBoxThreadsPool->setValue(std::stoi(parser.value("threads_client")));
 
     connect(this->ui->pushButtonClear, SIGNAL(clicked()),
             this->ui->plainTextEditConsole, SLOT(clear()));
@@ -84,6 +82,7 @@ void MainWindow::on_pushButtonStart_clicked()
 void MainWindow::setWidgetsEnable(bool serverRunning)
 {
     this->ui->spinBoxPort->setEnabled(!serverRunning);
+    this->ui->spinBoxThreadsPool->setEnabled(!serverRunning);
     this->ui->pushButtonStart->setEnabled(!serverRunning);
     this->ui->pushButtonStop->setEnabled(serverRunning);
     this->ui->plainTextEditConsole->setEnabled(serverRunning);
