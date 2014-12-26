@@ -24,7 +24,8 @@ HEADERS += MainWindow.hpp \
     ../Utils/Hash/RandomPrimeGenerator.hpp \
     ../Utils/Parser/IniParser.hpp \
     ../Utils/Exceptions/Exception.hpp \
-    ThreadServer.hpp
+    ThreadServer.hpp \
+    ThreadServerPool.hpp
 FORMS += MainWindow.ui
 SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Sockets/Socket.cpp \
@@ -37,7 +38,8 @@ SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Hash/RandomPrimeGenerator.cpp \
     ../Utils/Parser/IniParser.cpp \
     ../Utils/Exceptions/Exception.cpp \
-    ThreadServer.cpp
+    ThreadServer.cpp \
+    ThreadServerPool.cpp
 
 DISTFILES += \
     server_documents.conf \
