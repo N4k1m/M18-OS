@@ -4,32 +4,40 @@ ThreadServerPool::ThreadServerPool(int port, int threadsClient, QObject* parent)
     : QThread(parent), _port(port), _threadsClient(threadsClient),
       _socketServer(NULL), _socketClient(NULL), _stopRequested(false)
 {
-    // TODO : récupérer les délimiters
+    // Get delimiters
+    IniParser parser("server_documents.conf");
+
+    if (parser.keyExists("commandDelimiter"))
+        _protocolManager.setCommandDelimiter(parser.value("commandDelimiter"));
+    if (parser.keyExists("headerDelimiter"))
+        _protocolManager.setHeaderDelimiter(parser.value("headerDelimiter"));
+    if (parser.keyExists("endDelimiter"))
+        _protocolManager.setEndDelimiter(parser.value("endDelimiter"));
 }
 
 ThreadServerPool::~ThreadServerPool(void)
 {
     qDebug("ThreadServerPool ~ThreadServerPool");
 
-    delete this->_socketClient;
-    this->_socketClient = NULL;
+    delete _socketClient;
+    _socketClient = NULL;
 
-    delete this->_socketServer;
-    this->_socketServer = NULL;
+    delete _socketServer;
+    _socketServer = NULL;
 }
 
 void ThreadServerPool::requestStop(void)
 {
     qDebug("ThreadServerPool requestStop");
 
-    QMutexLocker locker(&this->_mutex);
-    this->_stopRequested = true;
+    QMutexLocker locker(&_mutex);
+    _stopRequested = true;
 
     // TODO : Faire un requestStop sur tous les threads client
 
     // Interrupt server blocking function
-    if (this->_socketServer != NULL && this->_socketServer->isValid())
-        this->_socketServer->close();
+    if (_socketServer != NULL && _socketServer->isValid())
+        _socketServer->close();
 }
 
 void ThreadServerPool::run(void)
@@ -37,7 +45,7 @@ void ThreadServerPool::run(void)
     try
     {
         // Create server socket
-        this->_socketServer = new TCPSocketServer(this->_port);
+        _socketServer = new TCPSocketServer(_port);
     }
     catch(const SocketException& exception)
     {
@@ -56,7 +64,7 @@ void ThreadServerPool::run(void)
     // Main loop
     while(true)
     {
-        if (this->stopRequested())
+        if (stopRequested())
         {
             qDebug("Main loop stopRequested");
             break;
@@ -66,15 +74,15 @@ void ThreadServerPool::run(void)
         try
         {
             emit message("Wainting client");
-            this->_socketClient = this->_socketServer->nextPendingConnection();
+            _socketClient = _socketServer->nextPendingConnection();
             emit message("Client connected");
         }
         catch(const SocketException& exception)
         {
             qDebug("SocketException Waiting client");
 
-            delete this->_socketServer;
-            this->server_socket = NULL;
+            delete _socketServer;
+            _socketServer = NULL;
 
             // Send message
             QString msg("Server stop waiting client : ");
@@ -88,4 +96,10 @@ void ThreadServerPool::run(void)
 
         // TODO : attribuer le client à un des threads client
     }
+}
+
+bool ThreadServerPool::stopRequested(void)
+{
+    QMutexLocker locker(&_mutex);
+    return _stopRequested;
 }
