@@ -2,8 +2,8 @@
 #include "ui_Widget.h"
 
 Widget::Widget(QWidget *parent) :
-    QWidget(parent), ui(new Ui::Widget), client_sock(NULL),
-    protocolManager("#", "=", "!"), primeGenerator()
+    QWidget(parent), ui(new Ui::Widget), client_sock(NULL), protocolManager(),
+    primeGenerator()
 
 {
     this->ui->setupUi(this);
@@ -45,27 +45,25 @@ Widget::~Widget(void)
 
 void Widget::on_pushButtonConnect_clicked()
 {
-    if (this->ui->lineEditIPServer->text().isEmpty())
+    // Some checks
+    try
     {
-        QMessageBox::warning(this, "Error", "Invalid IP address");
-        return;
-    }
+        if (this->ui->lineEditIPServer->text().isEmpty())
+            throw Exception("Invalid IP address");
 
-    if (this->ui->spinBoxPortServer->value() <= 0)
-    {
-        QMessageBox::warning(this, "Error", "Invalid port");
-        return;
-    }
+        if (this->ui->spinBoxPortServer->value() <= 0)
+            throw Exception("Invalid port number");
 
-    if (this->ui->lineEditUsername->text().isEmpty())
-    {
-        QMessageBox::warning(this, "Error", "Invalid username");
-        return;
-    }
+        if (this->ui->lineEditUsername->text().isEmpty())
+            throw Exception("Invalid username");
 
-    if (this->ui->lineEditPassword->text().isEmpty())
+        if (this->ui->lineEditPassword->text().isEmpty())
+            throw Exception("Invalid password");
+    }
+    catch(Exception const& ex)
     {
-        QMessageBox::warning(this, "Error", "Invalid password");
+        displayMessage("Error : " + QString(ex.what()));
+        QMessageBox::warning(this, "Error", ex.what());
         return;
     }
 
@@ -98,6 +96,14 @@ void Widget::on_pushButtonConnect_clicked()
         }
     }
     catch(SocketException const& ex)
+    {
+        delete this->client_sock;
+        client_sock = NULL;
+
+        displayMessage("Error : " + QString(ex.what()));
+        QMessageBox::critical(this, "Fatal Error", ex.what());
+    }
+    catch(Exception const& ex)
     {
         delete this->client_sock;
         client_sock = NULL;
@@ -259,9 +265,10 @@ void Widget::disconnectFromServer(void)
     }
 }
 
-bool Widget::login(void)
+bool Widget::login(void) // Throws SocketException and Exception
 {
     std::string tmp_str;
+    ssize_t ret;
 
     // Create LOGIN request with username
     this->protocolManager.setCommand(GDOCP::LOGIN);
@@ -272,10 +279,15 @@ bool Widget::login(void)
     displayMessage("Send query : " + QString::fromStdString(tmp_str));
 
     // Send LOGIN request with username
-    client_sock->send(tmp_str);
+    ret = client_sock->send(tmp_str);
+    if (ret == SOCKET_CLOSED)
+        throw Exception("Connection to server closed");
 
     // Receive LOGIN ack and nonce
-    client_sock->recv(tmp_str, protocolManager.endDelimiter());
+    ret = client_sock->recv(tmp_str, protocolManager.endDelimiter());
+    if (ret == SOCKET_CLOSED)
+        throw Exception("Connection to server closed");
+
     displayMessage("LOGIN ACK received : " + QString::fromStdString(tmp_str));
 
     // Create query object
@@ -319,10 +331,15 @@ bool Widget::login(void)
     displayMessage("Send query : " + QString::fromStdString(tmp_str));
 
     // Send LOGIN request with cnonce and hashpassword
-    client_sock->send(tmp_str);
+    ret = client_sock->send(tmp_str);
+    if (ret == SOCKET_CLOSED)
+        throw Exception("Connection to server closed");
 
     // Receive LOGIN or FAIL
-    client_sock->recv(tmp_str, protocolManager.endDelimiter());
+    ret = client_sock->recv(tmp_str, protocolManager.endDelimiter());
+    if (ret == SOCKET_CLOSED)
+        throw Exception("Connection to server closed");
+
     displayMessage("LOGIN or FAIL received : " + QString::fromStdString(tmp_str));
 
     // Create query object

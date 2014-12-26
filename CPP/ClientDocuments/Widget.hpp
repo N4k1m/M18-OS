@@ -49,7 +49,7 @@ class Widget : public QWidget
     protected:
 
         void disconnectFromServer(void);
-        bool login(void);
+        bool login(void); // Throws SocketException and Exception
 
         Ui::Widget *ui;
 
