@@ -3,9 +3,10 @@
 
 #include <QWidget>
 #include <QFileDialog>
-#include "ThreadServer.hpp"
+//#include "ThreadServer.hpp"       // Monothread
+#include "ThreadServerPool.hpp"     // Multithreads
 
-// Parser (configuration file)
+// Parser (default settings file)
 #include "../Utils/Parser/IniParser.hpp"
 
 namespace Ui
@@ -41,7 +42,8 @@ class MainWindow : public QWidget
     private:
 
         Ui::MainWindow *ui;
-        ThreadServer* _threadServeur;
+        //ThreadServer* _threadServeur;     // Monothread
+        ThreadServerPool* _threadServeur;   // Multithreads
 };
 
 #endif /* __MAINWINDOW_HPP__ */

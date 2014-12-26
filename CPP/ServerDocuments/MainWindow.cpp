@@ -67,7 +67,10 @@ void MainWindow::on_pushButtonStart_clicked()
     if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
         this->stopServer();
 
-    this->_threadServeur = new ThreadServer(this->ui->spinBoxPort->value(), 0);
+    //this->_threadServeur = new ThreadServer(this->ui->spinBoxPort->value(), 0);
+    this->_threadServeur = new ThreadServerPool(
+                               this->ui->spinBoxPort->value(),
+                               this->ui->spinBoxThreadsPool->value(), 0);
 
     connect(this->_threadServeur, SIGNAL(message(QString)),
             this, SLOT(displayMessage(QString)));
