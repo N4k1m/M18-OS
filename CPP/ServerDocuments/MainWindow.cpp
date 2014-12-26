@@ -24,12 +24,16 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
-    {
-        this->_threadServeur->quit();
-    }
+        this->stopServer();
 
     delete this->_threadServeur;
-    delete ui;
+    delete this->ui;
+}
+
+void MainWindow::stopServer()
+{
+    this->_threadServeur->requestStop();
+    this->_threadServeur->wait();
 }
 
 void MainWindow::displayMessage(const QString& msg)
@@ -37,19 +41,42 @@ void MainWindow::displayMessage(const QString& msg)
     this->ui->plainTextEditConsole->appendPlainText(msg);
 }
 
+void MainWindow::threadServerStarted()
+{
+    // Enable widgets
+    this->setWidgetsEnable(true);
+
+    // Display message
+    this->displayMessage("Server started on port " +
+                         QString::number(this->ui->spinBoxPort->value()));
+}
+
+void MainWindow::threadServerFinished()
+{
+    // Desable widgets
+    this->setWidgetsEnable(false);
+
+    // Suppression du thread
+    delete this->_threadServeur;
+    this->_threadServeur = NULL;
+
+    this->displayMessage("Thread server ended");
+}
+
 void MainWindow::on_pushButtonStart_clicked()
 {
     // Server is running
-    if (this->_threadServeur != NULL)
-    {
-        this->ui->plainTextEditConsole->appendPlainText("Server is already running\n");
-        return;
-    }
+    if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
+        this->stopServer();
 
     this->_threadServeur = new ThreadServer(this->ui->spinBoxPort->value(), 0);
 
-    connect(this->_threadServeur, SIGNAL(message(QString)), this, SLOT(displayMessage(QString)));
-    connect(this->_threadServeur, SIGNAL(serverRunning(bool)), this, SLOT(setWidgetsEnable(bool)));
+    connect(this->_threadServeur, SIGNAL(message(QString)),
+            this, SLOT(displayMessage(QString)));
+    connect(this->_threadServeur, SIGNAL(started()),
+            this, SLOT(threadServerStarted()));
+    connect(this->_threadServeur, SIGNAL(finished()),
+            this, SLOT(threadServerFinished()));
 
     this->_threadServeur->start();
 }
@@ -64,7 +91,5 @@ void MainWindow::setWidgetsEnable(bool serverRunning)
 
 void MainWindow::on_pushButtonStop_clicked()
 {
-    // TODO ... fermer le serveur ...
-
-    this->setWidgetsEnable(false);
+    this->stopServer();
 }

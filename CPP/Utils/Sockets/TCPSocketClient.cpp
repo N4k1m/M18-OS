@@ -87,13 +87,20 @@ ssize_t TCPSocketClient::recv(std::string& message, const std::string& endDelimi
     // Clear previous message content
     message.clear();
     ssize_t bytes_received = 0;
+    ssize_t ret = -1;
 
     while(!endingFound)
     {
         // Clear previous message received
         memset(buffer, 0, MAX_RECV);
 
-        bytes_received += this->recv(buffer, MAX_RECV, 0);
+        // Receive data
+        ret = this->recv(buffer, MAX_RECV, 0);
+        bytes_received += ret;
+
+        if (ret == SOCKET_CLOSED)
+            break;
+
         message.append(buffer);
 
         // Check if all the message has been received

@@ -32,8 +32,9 @@
 
     #define INVALID_SOCKET  -1
     #define SOCKET_ERROR    -1
-    #define closesocket(s)  ::close(s) // "Native C" function
     #define SOCKET_ERRNO    errno
+    #define SOCKET_CLOSED   0
+    #define closesocket(s)  ::close(s) // "Native C" function
 
     typedef int                 SOCKET;
     typedef struct sockaddr_in  SOCKADDR_IN;
