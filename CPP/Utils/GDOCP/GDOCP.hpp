@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <iterator>
 
+#define DEFAULT_COMMAND_DELIMITER "#"
+#define DEFAULT_HEADER_DELIMITER  "="
+#define DEFAULT_END_DELIMITER     "!"
+
 class GDOCP
 {
     public:
@@ -23,9 +27,10 @@ class GDOCP
             UNKNOWN
         };
 
-        explicit GDOCP(const std::string& commandDelimiter,
-                       const std::string& headerDelimiter,
-                       const std::string& endDelimiter);
+        explicit GDOCP(
+                const std::string& commandDelimiter = DEFAULT_COMMAND_DELIMITER,
+                const std::string& headerDelimiter  = DEFAULT_HEADER_DELIMITER,
+                const std::string& endDelimiter     = DEFAULT_END_DELIMITER);
 
         int parseQuery(const std::string& query);
         std::string generateQuery(void) const;
@@ -57,4 +62,4 @@ class GDOCP
         std::map<std::string, std::string> _headers;
 };
 
-#endif // GDOCP_HPP
+#endif /* __GDOCP_HPP__ */
