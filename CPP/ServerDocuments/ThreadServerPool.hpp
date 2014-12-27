@@ -45,10 +45,13 @@ class ThreadServerPool : public QThread
 
         void threadClientStarted(void);
         void threadClientFinished(void);
+        void threadClientClientAccepted(void);
+        void threadClientClientDisconnected(void);
 
     signals:
 
         void message(const QString& message);
+        void clientsCountChanged(int clientCount);
 
     protected:
 

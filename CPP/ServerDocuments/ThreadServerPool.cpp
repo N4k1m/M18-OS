@@ -30,6 +30,10 @@ ThreadServerPool::ThreadServerPool(int port, int threadsClientCount, QObject* pa
         // Connect signals
         connect(threadClient, SIGNAL(message(QString)),
                 this, SIGNAL(message(QString)));
+        connect(threadClient, SIGNAL(clientAccepted()),
+                this, SLOT(threadClientClientAccepted()));
+        connect(threadClient, SIGNAL(clientDisconnected()),
+                this, SLOT(threadClientClientDisconnected()));
         connect(threadClient, SIGNAL(started()),
                 this, SLOT(threadClientStarted()));
         connect(threadClient, SIGNAL(finished()),
@@ -84,12 +88,22 @@ void ThreadServerPool::requestStop(void)
 
 void ThreadServerPool::threadClientStarted(void)
 {
-    emit message("Thread client started");
+    emit message("Thread client : started");
 }
 
 void ThreadServerPool::threadClientFinished(void)
 {
-    emit message("Thread client ended");
+    emit message("Thread client : ended");
+}
+
+void ThreadServerPool::threadClientClientAccepted(void)
+{
+    emit message("Thread client : client accepted");
+}
+
+void ThreadServerPool::threadClientClientDisconnected(void)
+{
+    emit clientsCountChanged(clients.count());
 }
 
 void ThreadServerPool::run(void)
@@ -156,6 +170,8 @@ void ThreadServerPool::run(void)
         clients.append(this->_socketClient);
         ++clientAvailable;
         conditionMutex.unlock();
+
+        emit clientsCountChanged(clients.count());
 
         this->_socketClient = NULL; // Thread client free socket
 

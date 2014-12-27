@@ -31,6 +31,7 @@ class MainWindow : public QWidget
 
         void setWidgetsEnable(bool serverRunning);
         void displayMessage(const QString& msg);
+        void updateClientsCount(int clientsCount);
 
         void threadServerStarted(void);
         void threadServerFinished(void);

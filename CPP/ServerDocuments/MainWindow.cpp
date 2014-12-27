@@ -39,6 +39,11 @@ void MainWindow::displayMessage(const QString& msg)
     this->ui->plainTextEditConsole->appendPlainText(msg);
 }
 
+void MainWindow::updateClientsCount(int clientsCount)
+{
+    this->ui->spinBoxClientsCount->setValue(clientsCount);
+}
+
 void MainWindow::threadServerStarted(void)
 {
     // Enable widgets
@@ -74,6 +79,8 @@ void MainWindow::on_pushButtonStart_clicked(void)
 
     connect(this->_threadServeur, SIGNAL(message(QString)),
             this, SLOT(displayMessage(QString)));
+    connect(this->_threadServeur, SIGNAL(clientsCountChanged(int)),
+            this, SLOT(updateClientsCount(int)));
     connect(this->_threadServeur, SIGNAL(started()),
             this, SLOT(threadServerStarted()));
     connect(this->_threadServeur, SIGNAL(finished()),

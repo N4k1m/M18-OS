@@ -41,6 +41,8 @@ class ThreadClient : public QThread
     signals:
 
         void message(const QString& message);
+        void clientAccepted(void);
+        void clientDisconnected(void);
 
     protected:
 

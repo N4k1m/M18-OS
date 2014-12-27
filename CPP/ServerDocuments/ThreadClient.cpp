@@ -45,6 +45,8 @@ void ThreadClient::run(void)
         --clientAvailable;
         conditionMutex.unlock();
 
+        emit clientAccepted();
+
         // Manage client
         try
         {
@@ -104,7 +106,7 @@ void ThreadClient::run(void)
         this->_protocolManager.setCommand(GDOCP::UNKNOWN);
         this->_protocolManager.clearHeaders();
 
-        emit message("Thread client : client disconnected");
+        emit clientDisconnected();
     }
 }
 
