@@ -32,39 +32,15 @@ public class MainFrame extends javax.swing.JFrame
     public MainFrame()
     {
         this.initComponents();
+        this.createModels(); // Create ComboBoxes and Spinners models
 
         // Redirect the system output to a TextArea
         TextAreaOutputStream toas = TextAreaOutputStream.getInstance(
             this.textAreaOutput);
 
-        // Create ComboBoxes and Spinners models
-        this.createModels();
+        this.loadDefaultSettings();
+        this.threadServer = null;
 
-        // Load properties file
-        try
-        {
-            String path = System.getProperty("user.dir");
-            path += System.getProperty("file.separator")
-                    + "src"
-                    + System.getProperty("file.separator")
-                    + "GUI"
-                    + System.getProperty("file.separator")
-                    + "config.properties";
-
-            this.prop = PropertyLoader.load(path);
-
-            // Set the default port server
-            this.spinnerPort.setValue(
-                new Integer(this.prop.getProperty("port_server", DEFAULT_PORT)));
-
-            System.out.println("[ OK ] Parametres de configuration charges");
-        }
-        catch (IOException ex)
-        {
-            System.err.println(ex);
-        }
-
-        this.isRunning = false;
         this.showStatus();
     }
     //</editor-fold>
@@ -100,53 +76,82 @@ public class MainFrame extends javax.swing.JFrame
         this.spinnerCipherKeyLength.setModel(this.defaultSpinnerModel);
     }
 
+    private void loadDefaultSettings()
+    {
+        // Load properties file
+        try
+        {
+            String path = System.getProperty("user.dir");
+            path += System.getProperty("file.separator") + "src"
+                 + System.getProperty("file.separator")  + "GUI"
+                 + System.getProperty("file.separator")  + "config.properties";
+
+            Properties prop = PropertyLoader.load(path);
+
+            // Set the default port server
+            this.spinnerPort.setValue(
+                new Integer(prop.getProperty("port_server", DEFAULT_PORT)));
+
+            System.out.println("[ OK ] Default settings loaded");
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
+    }
+
     private void startServer()
     {
+        if (this.threadServer != null)
+            this.stopServer();
+
         // Start thread
         int port = (int)this.spinnerPort.getValue();
-        this.thServer = new ThServer(this, port);
-        this.thServer.start();
-
-        this.isRunning = !(this.thServer == null || !this.thServer.isAlive());
+        this.threadServer = new ThServer(this, port);
+        this.threadServer.start();
         this.showStatus();
     }
 
     private void stopServer()
     {
-        if (this.thServer == null)
+        if (this.threadServer == null)
             return;
 
         try
         {
             // Stop thread
-            this.thServer.requestStop();
-            this.thServer.join();
-            this.thServer = null;
+            this.threadServer.requestStop();
+            this.threadServer.join();
+            this.threadServer = null;
         }
         catch (IOException | InterruptedException ex)
         {
             System.err.println(ex);
         }
-
-        this.isRunning = !(this.thServer == null || !this.thServer.isAlive());
-        this.showStatus();
+        finally
+        {
+            this.showStatus();
+        }
     }
 
     private void showStatus()
     {
+        this.isRunning = this.threadServer != null &&
+                         this.threadServer.isAlive();
+
         this.spinnerPort.setEnabled(!this.isRunning);
 
-        if (!this.isRunning)
-        {
-            this.labelStatus.setForeground(Color.RED);
-            this.labelStatus.setText("Server stopped");
-            this.buttonStartStop.setText("Start");
-        }
-        else
+        if (this.isRunning)
         {
             this.labelStatus.setForeground(Color.GREEN);
             this.labelStatus.setText("Server is running");
             this.buttonStartStop.setText("Stop");
+        }
+        else
+        {
+            this.labelStatus.setForeground(Color.RED);
+            this.labelStatus.setText("Server stopped");
+            this.buttonStartStop.setText("Start");
         }
     }
 
@@ -162,17 +167,15 @@ public class MainFrame extends javax.swing.JFrame
             }
             catch (IllegalArgumentException e)
             {
-                MessageBoxes.ShowError(e.getMessage(), "Erreur génération de clé");
+                MessageBoxes.ShowError(e.getMessage(), "Key generation error");
                 return;
             }
-
-            System.out.println("[ OK ] Chiffrement " + provider + " recupere");
         }
 
         // Generate key
         this.cle = this.chiffrement.genererCle(
             (int)this.spinnerCipherKeyLength.getValue());
-        System.out.println("[ OK ] Cle " + provider + " generee");
+        System.out.println("[ OK ] Key " + provider + " generated");
 
         this.serializeKey();
     }
@@ -190,11 +193,9 @@ public class MainFrame extends javax.swing.JFrame
             }
             catch (IllegalArgumentException e)
             {
-                MessageBoxes.ShowError(e.getMessage(), "Erreur génération de clé");
+                MessageBoxes.ShowError(e.getMessage(), "Key generation error");
                 return;
             }
-
-            System.out.println("[ OK ] Authentification " + provider + " recupere");
         }
 
         ByteArrayList secretBytes = new ByteArrayList();
@@ -202,7 +203,7 @@ public class MainFrame extends javax.swing.JFrame
 
         // Generate key
         this.cle = this.authentication.generateKey(secretBytes, algorithm);
-        System.out.println("[ OK ] Cle " + provider + " generee avec " + algorithm);
+        System.out.println("[ OK ] Key " + provider + " generated with " + algorithm);
 
         this.serializeKey();
     }
@@ -222,7 +223,7 @@ public class MainFrame extends javax.swing.JFrame
         int option = chooser.showSaveDialog(this);
         if (option != JFileChooser.APPROVE_OPTION)
         {
-            System.out.println("[FAIL] Sauvegarde annulee, cle non enregistree.");
+            System.out.println("[FAIL] Canceled, key not saved.");
             return;
         }
 
@@ -230,7 +231,7 @@ public class MainFrame extends javax.swing.JFrame
         if (!fileName.endsWith(".ser"))
             fileName += ".ser";
 
-        System.out.println("[ OK ] Destination : " + fileName);
+        System.out.println("[ OK ] Path : " + fileName);
 
         try
         {
@@ -245,7 +246,7 @@ public class MainFrame extends javax.swing.JFrame
                 oos.writeObject(this.cle);
                 oos.flush();
 
-                System.out.println("[ OK ] Cle serialisee ...");
+                System.out.println("[ OK ] Key serialized");
             }
             finally
             {
@@ -501,16 +502,16 @@ public class MainFrame extends javax.swing.JFrame
             // Get provider
             String provider = (String)this.comboBoxCipherProviders.getSelectedItem();
             if (provider == null || provider.isEmpty())
-                throw new Exception("Vous devez choisir un provider");
+                throw new Exception("You have to choose a provider");
 
-            System.out.println("[ OK ] Debut d'une nouvelle generation de cle de cryptage ...");
+            System.out.println("[ OK ] Start a new encryption key generation");
 
             this.generateCipherKey(provider); // Synchronized
         }
         catch (Exception e)
         {
             MessageBoxes.ShowError(e.getMessage(),
-                                   "Impossible de générer la clé");
+                                   "Unable to generate the key");
         }
     }//GEN-LAST:event_buttonGenerateCipherKeyActionPerformed
 
@@ -521,26 +522,26 @@ public class MainFrame extends javax.swing.JFrame
             // Get secret
             String secret = this.textFieldSecretMessage.getText();
             if(secret == null || secret.isEmpty())
-                throw new Exception("Vous devez renseigner un message secret");
+                throw new Exception("Secret message is missing");
 
             // Get provider
             String provider = (String)this.comboBoxAuthenticationProviders.getSelectedItem();
             if (provider == null || provider.isEmpty())
-                throw new Exception("Vous devez choisir un provider");
+                throw new Exception("You have to choose a provider");
 
             // Get algorithm
             String algorithm = (String)this.comboBoxAlgorithms.getSelectedItem();
             if (algorithm == null || algorithm.isEmpty())
-                throw new Exception("Vous devez choisir un algorithme");
+                throw new Exception("You have to choose an algorithm");
 
-            System.out.println("[ OK ] Debut d'une nouvelle generation de cle d'authentification ...");
+            System.out.println("[ OK ] Start a new authentication key generation");
 
             this.generateAuthenticationKey(provider, algorithm, secret);
         }
         catch (Exception e)
         {
             MessageBoxes.ShowError(e.getMessage(),
-                                   "Impossible de générer la clé");
+                                   "Unable to generate the key");
         }
     }//GEN-LAST:event_buttonGenerateAuthenticationKeyActionPerformed
     //</editor-fold>
@@ -577,9 +578,8 @@ public class MainFrame extends javax.swing.JFrame
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Private variables">
-    private Properties prop;
     private boolean isRunning;
-    private ThServer thServer;
+    private ThServer threadServer;
 
     // Models
     private SpinnerNumberModel defaultSpinnerModel;
