@@ -165,9 +165,6 @@ void GDOCP::setCommand(GDOCPCommand command)
 
 void GDOCP::setNewCommand(GDOCPCommand command)
 {
-    if (this->_command == command)
-        return;
-
     this->_command = command;
 
     // If command changed, previous headers are invalid
