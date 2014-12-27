@@ -41,15 +41,16 @@ class Widget : public QWidget
         // Auto-connect
         void on_pushButtonConnect_clicked();
         void on_pushButtonDisconnect_clicked();
+        void on_pushButtonPlainText_clicked();
         void on_pushButtonCipherText_clicked();
         void on_pushButtonClear_clicked();
 
-        void on_pushButtonPlainText_clicked();
-
     protected:
 
-        void disconnectFromServer(void);
-        bool login(void); // Throws SocketException and Exception
+        void loginProcedure(void); // Throws SocketException and Exception
+        void closeConnection(void);
+
+    protected:
 
         Ui::Widget *ui;
 
@@ -58,4 +59,4 @@ class Widget : public QWidget
         RandomPrimeGenerator primeGenerator;
 };
 
-#endif // __WIDGET_HPP__
+#endif /* __WIDGET_HPP__ */

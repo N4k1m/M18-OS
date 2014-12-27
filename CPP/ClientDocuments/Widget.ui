@@ -2,118 +2,92 @@
 <ui version="4.0">
  <class>Widget</class>
  <widget class="QWidget" name="Widget">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>874</width>
-    <height>328</height>
-   </rect>
-  </property>
   <property name="windowTitle">
    <string>Client Document</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <layout class="QHBoxLayout" name="horizontalLayoutHeader">
      <item>
-      <widget class="QLabel" name="labelIP">
-       <property name="text">
-        <string>IP Server :</string>
-       </property>
-      </widget>
+      <layout class="QGridLayout" name="gridLayoutHeaderLeft">
+       <item row="0" column="0">
+        <widget class="QLabel" name="labelIP">
+         <property name="text">
+          <string>IP Server :</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEditIPServer"/>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="labelPortServer">
+         <property name="text">
+          <string>Port :</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QSpinBox" name="spinBoxPortServer">
+         <property name="accelerated">
+          <bool>true</bool>
+         </property>
+         <property name="maximum">
+          <number>99999999</number>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="labelUsername">
+         <property name="text">
+          <string>Username :</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEditUsername"/>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLabel" name="labelPassword">
+         <property name="text">
+          <string>Password :</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QLineEdit" name="lineEditPassword">
+         <property name="echoMode">
+          <enum>QLineEdit::PasswordEchoOnEdit</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QLineEdit" name="lineEditIPServer"/>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelPortServer">
-       <property name="text">
-        <string>Port :</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="spinBoxPortServer">
-       <property name="accelerated">
-        <bool>true</bool>
-       </property>
-       <property name="maximum">
-        <number>99999999</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelUsername">
-       <property name="text">
-        <string>Username :</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="lineEditUsername"/>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelPassword">
-       <property name="text">
-        <string>Password :</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="lineEditPassword">
-       <property name="echoMode">
-        <enum>QLineEdit::PasswordEchoOnEdit</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonConnect">
-       <property name="text">
-        <string>Connect</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonDisconnect">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Disconnect</string>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="verticalLayoutHeaderRight">
+       <item>
+        <widget class="QPushButton" name="pushButtonConnect">
+         <property name="text">
+          <string>Connect</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButtonDisconnect">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Disconnect</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
    <item>
-    <spacer name="horizontalSpacer_3">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>853</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
+    <layout class="QHBoxLayout" name="horizontalLayoutButtonsDownload">
      <item>
       <widget class="QPushButton" name="pushButtonPlainText">
        <property name="enabled">
@@ -134,30 +108,17 @@
        </property>
       </widget>
      </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonClear">
-       <property name="text">
-        <string>Clear</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
     </layout>
    </item>
    <item>
-    <widget class="QPlainTextEdit" name="plainTextEdit"/>
+    <widget class="QPlainTextEdit" name="plainTextEditConsole"/>
+   </item>
+   <item>
+    <widget class="QPushButton" name="pushButtonClear">
+     <property name="text">
+      <string>Clear</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

@@ -66,7 +66,7 @@ void ThreadClient::run(void)
                     break;
                 }
 
-                emit message("Thread client : message received : "
+                emit message("Thread client : received : "
                              + QString::fromStdString(msg));
 
                 // create query object. FAIL query is created if msg is empty
@@ -129,8 +129,7 @@ void ThreadClient::manageLOGIN(void)
 
     // Generate nonce (prime number)
     unsigned int nonce = this->_primeGenerator.get();
-    emit message("Thread client : valid user : nonce generated = "
-                 + QString::number(nonce));
+    emit message("Thread client : nonce generated = " + QString::number(nonce));
 
     // Create query object (LOGIN ACK)
     this->_protocolManager.setNewCommand(GDOCP::LOGIN);
@@ -142,8 +141,7 @@ void ThreadClient::manageLOGIN(void)
 
     // Receive LOGIN ACK with cnonce and hashed password
     this->_socketClient->recv(tmp_str, this->_protocolManager.endDelimiter());
-    emit message("Thread client : LOGIN ACK received : "
-                 + QString::fromStdString(tmp_str));
+    emit message("Thread client : received : " + QString::fromStdString(tmp_str));
 
     // Create query objet
     this->_protocolManager.parseQuery(tmp_str);

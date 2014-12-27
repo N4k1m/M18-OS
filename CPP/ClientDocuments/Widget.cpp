@@ -43,6 +43,24 @@ Widget::~Widget(void)
     delete this->ui;
 }
 
+void Widget::setWidgetsEnable(bool client_connected)
+{
+    this->ui->lineEditIPServer->setEnabled(!client_connected);
+    this->ui->spinBoxPortServer->setEnabled(!client_connected);
+    this->ui->lineEditUsername->setEnabled(!client_connected);
+    this->ui->lineEditPassword->setEnabled(!client_connected);
+    this->ui->pushButtonConnect->setEnabled(!client_connected);
+
+    this->ui->pushButtonDisconnect->setEnabled(client_connected);
+    this->ui->pushButtonPlainText->setEnabled(client_connected);
+    this->ui->pushButtonCipherText->setEnabled(client_connected);
+}
+
+void Widget::displayMessage(const QString &message)
+{
+    this->ui->plainTextEditConsole->appendPlainText(message);
+}
+
 void Widget::on_pushButtonConnect_clicked()
 {
     // Some checks
@@ -62,15 +80,15 @@ void Widget::on_pushButtonConnect_clicked()
     }
     catch(Exception const& ex)
     {
-        displayMessage("Error : " + QString(ex.what()));
-        QMessageBox::warning(this, "Error", ex.what());
+        this->displayMessage("Error : " + QString(ex.what()));
+        QMessageBox::information(this, "Error", ex.what());
         return;
     }
 
     try
     {
         // Close connection is already connected
-        this->disconnectFromServer();
+        this->closeConnection();
 
         // Create client TCP socket
         this->client_sock = new TCPSocketClient;
@@ -78,67 +96,63 @@ void Widget::on_pushButtonConnect_clicked()
         // Console display
         std::string host = this->ui->lineEditIPServer->text().toStdString();
         int port = this->ui->spinBoxPortServer->value();
-        displayMessage("Try to connect to " + this->ui->lineEditIPServer->text()
-                       + " on port " + QString::number(port));
+        this->displayMessage("Try to connect to "
+                             + this->ui->lineEditIPServer->text()
+                             + " on port " + QString::number(port));
 
         // Connect to host
         this->client_sock->connectToHost(host, port);
-        displayMessage("Connected !");
+        this->displayMessage("Connected !");
 
         // Login procedure
-        if (this->login())
-            this->setWidgetsEnable(true);
-        else
-        {
-            delete this->client_sock;
-            this->client_sock = NULL;
-            QMessageBox::critical(this, "Login failed",
-                                  QString::fromStdString(protocolManager.getHeaderValue("cause")));
-        }
+        this->loginProcedure();
+        this->setWidgetsEnable(true);
     }
     catch(SocketException const& ex)
     {
-        delete this->client_sock;
-        client_sock = NULL;
+        this->closeConnection();
 
-        displayMessage("Error : " + QString(ex.what()));
-        QMessageBox::critical(this, "Fatal Error", ex.what());
+        this->displayMessage("Network Error : " + QString(ex.what()));
+        QMessageBox::critical(this, "Login failed", ex.what());
     }
     catch(Exception const& ex)
     {
-        delete this->client_sock;
-        client_sock = NULL;
+        this->closeConnection();
 
-        displayMessage("Error : " + QString(ex.what()));
-        QMessageBox::critical(this, "Fatal Error", ex.what());
+        this->displayMessage("Login Error : " + QString(ex.what()));
+        QMessageBox::critical(this, "Login failed", ex.what());
     }
-}
-
-void Widget::setWidgetsEnable(bool client_connected)
-{
-    this->ui->lineEditIPServer->setEnabled(!client_connected);
-    this->ui->spinBoxPortServer->setEnabled(!client_connected);
-    this->ui->lineEditUsername->setEnabled(!client_connected);
-    this->ui->lineEditPassword->setEnabled(!client_connected);
-    this->ui->pushButtonConnect->setEnabled(!client_connected);
-
-    this->ui->pushButtonDisconnect->setEnabled(client_connected);
-    this->ui->pushButtonPlainText->setEnabled(client_connected);
-    this->ui->pushButtonCipherText->setEnabled(client_connected);
-}
-
-void Widget::displayMessage(const QString &message)
-{
-    this->ui->plainTextEdit->appendPlainText(message);
 }
 
 void Widget::on_pushButtonDisconnect_clicked()
 {
-    this->disconnectFromServer();
+    // Already disconnected
+    if (this->client_sock == NULL || !this->client_sock->isValid())
+        return;
+
+    try
+    {
+        this->displayMessage("Send CLOSE command");
+
+        this->protocolManager.setNewCommand(GDOCP::CLOSE);
+        this->client_sock->send(this->protocolManager.generateQuery());
+
+        this->closeConnection();
+        this->displayMessage("Disconnected !");
+
+        this->setWidgetsEnable(false);
+    }
+    catch(const SocketException& ex)
+    {
+        QMessageBox::critical(this, "Critical error", ex.what());
+    }
 }
 
 void Widget::on_pushButtonPlainText_clicked()
 {
+    std::string tmp_str;
+    ssize_t ret;
+
     try
     {
         // Check if the user is connected to the server
@@ -153,34 +167,52 @@ void Widget::on_pushButtonPlainText_clicked()
             return;
 
         // Create query
-        protocolManager.setCommand(GDOCP::GETPLAIN);
-        protocolManager.clearHeaders();
+        protocolManager.setNewCommand(GDOCP::GETPLAIN);
         protocolManager.setHeaderValue("filename", filename.toStdString());
 
-        // Send query
-        this->client_sock->send(protocolManager.generateQuery());
+        tmp_str = this->protocolManager.generateQuery();
+        this->displayMessage("Send : " + QString::fromStdString(tmp_str));
 
-        // Receive replay
-        std::string reply;
-        client_sock->recv(reply, protocolManager.endDelimiter());
+        // Send GETPLAIN query
+        ret = this->client_sock->send(tmp_str);
+        if (ret == SOCKET_CLOSED)
+            throw Exception("Connection to server closed");
+
+        // Receive GETPLAIN
+        ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
+        if (ret == SOCKET_CLOSED)
+            throw Exception("Connection to server closed");
+
+        this->displayMessage("Received : " + QString::fromStdString(tmp_str));
 
         // Create query object
-        protocolManager.parseQuery(reply);
+        this->protocolManager.parseQuery(tmp_str);
 
-        // if request failed
-        if (protocolManager.command() == GDOCP::FAIL)
+
+        // If request failed
+        if (this->protocolManager.is(GDOCP::FAIL))
             throw Exception(protocolManager.getHeaderValue("cause"));
-        else if (protocolManager.command() == GDOCP::GETPLAIN)
-            displayMessage("Plain Text : " + QString::fromStdString(
-                               protocolManager.getHeaderValue("content")));
+
+        // If received invalid query
+        if (!this->protocolManager.is(GDOCP::GETPLAIN))
+            throw Exception("Received invalid reply");
+
+        this->displayMessage("Plain text : " + QString::fromStdString(
+                              this->protocolManager.getHeaderValue("content")));
     }
     catch(SocketException const& ex)
     {
+        this->closeConnection();
+        this->setWidgetsEnable(false);
+
         displayMessage("Error : " + QString(ex.what()));
         QMessageBox::critical(this, "Fatal Error", ex.what());
     }
     catch(Exception const& ex)
     {
+        this->closeConnection();
+        this->setWidgetsEnable(false);
+
         displayMessage("Error : " + QString(ex.what()));
         QMessageBox::critical(this, "Fatal Error", ex.what());
     }
@@ -188,6 +220,9 @@ void Widget::on_pushButtonPlainText_clicked()
 
 void Widget::on_pushButtonCipherText_clicked()
 {
+    std::string tmp_str;
+    ssize_t ret;
+
     try
     {
         // Check if the user is connected to the server
@@ -202,34 +237,51 @@ void Widget::on_pushButtonCipherText_clicked()
             return;
 
         // Create query
-        protocolManager.setCommand(GDOCP::GETCIPHER);
-        protocolManager.clearHeaders();
+        protocolManager.setNewCommand(GDOCP::GETCIPHER);
         protocolManager.setHeaderValue("filename", filename.toStdString());
 
-        // Send query
-        this->client_sock->send(protocolManager.generateQuery());
+        tmp_str = this->protocolManager.generateQuery();
+        this->displayMessage("Send : " + QString::fromStdString(tmp_str));
 
-        // Receive replay
-        std::string reply;
-        client_sock->recv(reply, protocolManager.endDelimiter());
+        // Send GETCIPHER request
+        ret = this->client_sock->send(tmp_str);
+        if (ret == SOCKET_CLOSED)
+            throw Exception("Connection to server closed");
+
+        // Receive GETCIPHER
+        ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
+        if (ret == SOCKET_CLOSED)
+            throw Exception("Connection to server closed");
+
+        this->displayMessage("Received : " + QString::fromStdString(tmp_str));
 
         // Create query object
-        protocolManager.parseQuery(reply);
+        this->protocolManager.parseQuery(tmp_str);
 
-        // if request failed
-        if (protocolManager.command() == GDOCP::FAIL)
-            throw Exception(protocolManager.getHeaderValue("cause"));
-        else if (protocolManager.command() == GDOCP::GETCIPHER)
-            displayMessage("Cipher Text : " + QString::fromStdString(
-                               protocolManager.getHeaderValue("content")));
+        // If request failed
+        if (this->protocolManager.is(GDOCP::FAIL))
+            throw Exception(this->protocolManager.getHeaderValue("cause"));
+
+        // If received invalid query
+        if (!this->protocolManager.is(GDOCP::GETCIPHER))
+            throw Exception("Received invalid reply");
+
+        this->displayMessage("Cipher text : " + QString::fromStdString(
+                              this->protocolManager.getHeaderValue("content")));
     }
     catch(SocketException const& ex)
     {
+        this->closeConnection();
+        this->setWidgetsEnable(false);
+
         displayMessage("Error : " + QString(ex.what()));
         QMessageBox::critical(this, "Fatal Error", ex.what());
     }
     catch(Exception const& ex)
     {
+        this->closeConnection();
+        this->setWidgetsEnable(false);
+
         displayMessage("Error : " + QString(ex.what()));
         QMessageBox::critical(this, "Fatal Error", ex.what());
     }
@@ -237,124 +289,92 @@ void Widget::on_pushButtonCipherText_clicked()
 
 void Widget::on_pushButtonClear_clicked()
 {
-    this->ui->plainTextEdit->clear();
+    this->ui->plainTextEditConsole->clear();
 }
 
-void Widget::disconnectFromServer(void)
-{
-    // Already disconnected
-    if (this->client_sock == NULL || !this->client_sock->isValid())
-        return;
-
-    try
-    {
-        displayMessage("Send CLOSE command");
-
-        this->protocolManager.setCommand(GDOCP::CLOSE);
-        client_sock->send(protocolManager.generateQuery());
-
-        delete this->client_sock;
-        this->client_sock = NULL;
-
-        displayMessage("Disconnected !");
-
-        this->setWidgetsEnable(false);
-    }
-    catch(const SocketException& ex)
-    {
-        QMessageBox::critical(this, "Critical error", ex.what());
-    }
-}
-
-bool Widget::login(void) // Throws SocketException and Exception
+void Widget::loginProcedure(void) // Throws SocketException and Exception
 {
     std::string tmp_str;
     ssize_t ret;
 
     // Create LOGIN request with username
-    this->protocolManager.setCommand(GDOCP::LOGIN);
-    this->protocolManager.clearHeaders();
-    this->protocolManager.setHeaderValue("username", this->ui->lineEditUsername->text().toStdString());
+    this->protocolManager.setNewCommand(GDOCP::LOGIN);
+    this->protocolManager.setHeaderValue(
+                "username", this->ui->lineEditUsername->text().toStdString());
 
-    tmp_str = protocolManager.generateQuery();
-    displayMessage("Send query : " + QString::fromStdString(tmp_str));
+    tmp_str = this->protocolManager.generateQuery();
+    this->displayMessage("Send : " + QString::fromStdString(tmp_str));
 
     // Send LOGIN request with username
-    ret = client_sock->send(tmp_str);
+    ret = this->client_sock->send(tmp_str);
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
     // Receive LOGIN ack and nonce
-    ret = client_sock->recv(tmp_str, protocolManager.endDelimiter());
+    ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
-    displayMessage("LOGIN ACK received : " + QString::fromStdString(tmp_str));
+    this->displayMessage("Received : " + QString::fromStdString(tmp_str));
 
     // Create query object
-    protocolManager.parseQuery(tmp_str);
+    this->protocolManager.parseQuery(tmp_str);
 
-    // if request failed
-    if (protocolManager.command() == GDOCP::FAIL)
-    {
-        displayMessage(QString::fromStdString(
-                           protocolManager.getHeaderValue("cause")));
-        return false;
-    }
+    // If request failed
+    if (this->protocolManager.is(GDOCP::FAIL))
+        throw Exception(protocolManager.getHeaderValue("cause"));
 
-    if (protocolManager.command() != GDOCP::LOGIN)
-        return false;
+    // If received invalid query
+    if (!this->protocolManager.is(GDOCP::LOGIN))
+        throw Exception("Received invalid reply");
 
     // LOGIN ACK : Get nonce
-    unsigned int nonce;
-    tmp_str = protocolManager.getHeaderValue("nonce");
-    std::istringstream(tmp_str) >> nonce;
-    displayMessage("nonce recieved = " + QString::number(nonce));
+    unsigned int nonce = std::stoul(protocolManager.getHeaderValue("nonce"));
+    this->displayMessage("nonce recieved = " + QString::number(nonce));
 
     // Generate cnonce (prime number)
     unsigned int cnonce = primeGenerator.get();
-    displayMessage("cnonce generated = " + QString::number(cnonce));
+    this->displayMessage("cnonce generated = " + QString::number(cnonce));
 
     // Hash password
     tmp_str = this->ui->lineEditPassword->text().toStdString();
     unsigned int hash_passwd = Hash::hash_str(tmp_str, nonce, cnonce);
-    displayMessage("Hash password = " + QString::number(hash_passwd));
+    this->displayMessage("Hash password = " + QString::number(hash_passwd));
 
     // Build query
-    protocolManager.setCommand(GDOCP::LOGIN);
-    protocolManager.clearHeaders();
-    tmp_str = std::to_string(cnonce); // C++11
-    protocolManager.setHeaderValue("cnonce", tmp_str);
-    tmp_str = std::to_string(hash_passwd); // C++11
-    protocolManager.setHeaderValue("hashpassword", tmp_str);
+    protocolManager.setNewCommand(GDOCP::LOGIN);
+    protocolManager.setHeaderValue("cnonce", std::to_string(cnonce));
+    protocolManager.setHeaderValue("hashpassword", std::to_string(hash_passwd));
 
     tmp_str = protocolManager.generateQuery();
-    displayMessage("Send query : " + QString::fromStdString(tmp_str));
+    displayMessage("Send : " + QString::fromStdString(tmp_str));
 
     // Send LOGIN request with cnonce and hashpassword
-    ret = client_sock->send(tmp_str);
+    ret = this->client_sock->send(tmp_str);
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
     // Receive LOGIN or FAIL
-    ret = client_sock->recv(tmp_str, protocolManager.endDelimiter());
+    ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
-    displayMessage("LOGIN or FAIL received : " + QString::fromStdString(tmp_str));
+    this->displayMessage("Received : " + QString::fromStdString(tmp_str));
 
     // Create query object
-    protocolManager.parseQuery(tmp_str);
+    this->protocolManager.parseQuery(tmp_str);
 
-    // if request failed
-    if (protocolManager.command() == GDOCP::FAIL)
-    {
-        displayMessage(QString::fromStdString(
-                           protocolManager.getHeaderValue("cause")));
-        return false;
-    }
-    else if (protocolManager.command() == GDOCP::LOGIN)
-        return true;
+    // If request failed
+    if (this->protocolManager.is(GDOCP::FAIL))
+        throw Exception(protocolManager.getHeaderValue("cause"));
 
-    return false;
+    // If received invalid query
+    if (!this->protocolManager.is(GDOCP::LOGIN))
+        throw Exception("Received invalid reply");
+}
+
+void Widget::closeConnection(void)
+{
+    delete this->client_sock;
+    this->client_sock = NULL;
 }
