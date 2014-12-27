@@ -17,9 +17,9 @@ GDOCP::GDOCP(GDOCP const& other)
     : _commandDelimiter(other._commandDelimiter),
       _headerDelimiter(other._headerDelimiter),
       _endDelimiter(other._endDelimiter),
-      _command(UNKNOWN)
+      _command(other._command)
 {
-
+    // Only delimiters and command are copied (no header)
 }
 
 int GDOCP::parseQuery(const string &query)
@@ -158,9 +158,20 @@ string GDOCP::endDelimiter(void) const
     return this->_endDelimiter;
 }
 
-void GDOCP::setCommand(GDOCPCommand type)
+void GDOCP::setCommand(GDOCPCommand command)
 {
-    this->_command = type;
+    this->_command = command;
+}
+
+void GDOCP::setNewCommand(GDOCPCommand command)
+{
+    if (this->_command == command)
+        return;
+
+    this->_command = command;
+
+    // If command changed, previous headers are invalid
+    this->clearHeaders();
 }
 
 GDOCP::GDOCPCommand GDOCP::command(void) const
@@ -182,6 +193,11 @@ void GDOCP::setHeaderValue(const string &header, const string &value)
     transform(newHeader.begin(), newHeader.end(),newHeader.begin(), ::toupper);
 
     this->_headers[newHeader] = value;
+}
+
+bool GDOCP::is(GDOCPCommand command)
+{
+    return this->_command == command;
 }
 
 void GDOCP::clearHeaders(void)

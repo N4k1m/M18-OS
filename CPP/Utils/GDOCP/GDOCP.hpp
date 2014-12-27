@@ -45,12 +45,14 @@ class GDOCP
         std::string endDelimiter(void) const;
 
         void setCommand(GDOCPCommand command);
+        void setNewCommand(GDOCPCommand command);
         GDOCPCommand command(void) const;
 
         std::string getHeaderValue(const std::string header);
         void setHeaderValue(const std::string& header,
                             const std::string& value);
 
+        bool is(GDOCPCommand command);
         void clearHeaders(void);
 
     protected:

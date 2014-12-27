@@ -182,8 +182,7 @@ void ThreadServerPool::run(void)
 
 void ThreadServerPool::sendFAILMessage(const QString& cause)
 {
-    this->_protocolManager.clearHeaders();
-    this->_protocolManager.setCommand(GDOCP::FAIL);
+    this->_protocolManager.setNewCommand(GDOCP::FAIL);
     this->_protocolManager.setHeaderValue("cause", cause.toStdString());
     this->_socketClient->send(this->_protocolManager.generateQuery());
 }

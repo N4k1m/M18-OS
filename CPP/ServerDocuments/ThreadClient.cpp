@@ -53,7 +53,7 @@ void ThreadClient::run(void)
             std::string msg;
 
             // While client don't ask to close
-            while(this->_protocolManager.command() != GDOCP::CLOSE)
+            while(!this->_protocolManager.is(GDOCP::CLOSE))
             {
                 // Receive query
                 ssize_t ret = this->_socketClient->recv(
@@ -61,7 +61,10 @@ void ThreadClient::run(void)
 
                 // Client close the connection
                 if (ret == SOCKET_CLOSED)
+                {
+                    emit message("Thread client : client close the connection");
                     break;
+                }
 
                 emit message("Thread client : message received : "
                              + QString::fromStdString(msg));
@@ -103,8 +106,7 @@ void ThreadClient::run(void)
 
         // Reset client settings
         this->_clientConnected = false;
-        this->_protocolManager.setCommand(GDOCP::UNKNOWN);
-        this->_protocolManager.clearHeaders();
+        this->_protocolManager.setNewCommand(GDOCP::UNKNOWN);
 
         emit clientDisconnected();
     }
@@ -131,8 +133,7 @@ void ThreadClient::manageLOGIN(void)
                  + QString::number(nonce));
 
     // Create query object (LOGIN ACK)
-    this->_protocolManager.setCommand(GDOCP::LOGIN);
-    this->_protocolManager.clearHeaders();
+    this->_protocolManager.setNewCommand(GDOCP::LOGIN);
     std::string tmp_str = std::to_string(nonce);
     this->_protocolManager.setHeaderValue("nonce", tmp_str);
 
@@ -148,7 +149,7 @@ void ThreadClient::manageLOGIN(void)
     this->_protocolManager.parseQuery(tmp_str);
 
     // Check if we recieved a LOGIN request
-    if (this->_protocolManager.command() != GDOCP::LOGIN)
+    if (!this->_protocolManager.is(GDOCP::LOGIN))
     {
         sendFAILMessage("Invalide request received");
         emit message("Thread client : invalide request received");
@@ -175,19 +176,17 @@ void ThreadClient::manageLOGIN(void)
     emit message("Thread client : hash password = "
                  + QString::number(hash_passwd));
 
-    this->_protocolManager.clearHeaders();
-
     // Accept or not the client
     if (hash_passwd == hash_passwd_recieved)
     {
         this->_clientConnected = true;
-        this->_protocolManager.setCommand(GDOCP::LOGIN);
+        this->_protocolManager.setNewCommand(GDOCP::LOGIN);
         emit message("Thread client : client logged");
     }
     else
     {
         this->_clientConnected = false;
-        this->_protocolManager.setCommand(GDOCP::FAIL);
+        this->_protocolManager.setNewCommand(GDOCP::FAIL);
         this->_protocolManager.setHeaderValue("cause", "Invalid password");
         emit message("Thread client : client refused");
     }
@@ -237,8 +236,7 @@ void ThreadClient::manageGETPLAIN(void)
     infile.close();
 
     // Create query
-    this->_protocolManager.setCommand(GDOCP::GETPLAIN);
-    this->_protocolManager.clearHeaders();
+    this->_protocolManager.setNewCommand(GDOCP::GETPLAIN);
     this->_protocolManager.setHeaderValue("content", content);
 
     // Send GETPLAIN reply
@@ -286,8 +284,7 @@ void ThreadClient::manageGETCIPHER(void)
     infile.close();
 
     // Create query
-    this->_protocolManager.setCommand(GDOCP::GETCIPHER);
-    this->_protocolManager.clearHeaders();
+    this->_protocolManager.setNewCommand(GDOCP::GETCIPHER);
     this->_protocolManager.setHeaderValue("content", content);
 
     // Send GETCIPHER reply
@@ -296,8 +293,7 @@ void ThreadClient::manageGETCIPHER(void)
 
 void ThreadClient::sendFAILMessage(const std::string& cause)
 {
-    this->_protocolManager.clearHeaders();
-    this->_protocolManager.setCommand(GDOCP::FAIL);
+    this->_protocolManager.setNewCommand(GDOCP::FAIL);
     this->_protocolManager.setHeaderValue("cause", cause);
     this->_socketClient->send(this->_protocolManager.generateQuery());
 }
