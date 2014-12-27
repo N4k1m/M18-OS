@@ -10,6 +10,7 @@ import Utils.MessageBoxes;
 import Utils.PropertyLoader;
 import Utils.Request;
 import Utils.TextAreaOutputStream;
+import java.awt.Color;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -28,49 +29,19 @@ public class MainFrame extends javax.swing.JFrame
     public MainFrame()
     {
         this.initComponents();
+        this.createModels();
 
         // Redirect the system output to a TextArea
         TextAreaOutputStream toas =
             TextAreaOutputStream.getInstance(this.textAreaOutput);
 
+        this.loadDefaultSettings();
         this.sock = null;
-
-        // Load properties file
-        try
-        {
-            String path = System.getProperty("user.dir");
-            path += System.getProperty("file.separator")
-                    + "src"
-                    + System.getProperty("file.separator")
-                    + "GUI"
-                    + System.getProperty("file.separator")
-                    + "config.properties";
-
-            this.prop = PropertyLoader.load(path);
-
-            // Set the default ip server
-            this.textFieldIPServer.setText(
-                this.prop.getProperty("ip_server", DEFAULT_IP));
-
-            // Set the default port server
-            this.spinnerPortServer.setValue(
-                new Integer(this.prop.getProperty("port_server", DEFAULT_PORT)));
-
-            System.out.println("[ OK ] Parametres de configuration charges");
-        }
-        catch (IOException ex)
-        {
-            System.err.println(ex);
-        }
-
-        // Create models
-        this.createModels();
-
-        // Hide tab
-        this.disconnectFromServer();
 
         // Center frame
         this.setLocationRelativeTo(null);
+
+        this.showStatus();
     }
     //</editor-fold>
 
@@ -90,6 +61,34 @@ public class MainFrame extends javax.swing.JFrame
         this.comboBoxCipherProviders.setModel(this.chiffrementProvidersModel);
         this.comboBoxAuthenticationProviders.setModel(this.AuthenticationProvidersModels);
         this.comboBoxIntegrityProviders.setModel(this.IntegrityProvidersModel);
+    }
+
+    private void loadDefaultSettings()
+    {
+        // Load properties file
+        try
+        {
+            String path = System.getProperty("user.dir");
+            path += System.getProperty("file.separator") + "src"
+                 + System.getProperty("file.separator")  + "GUI"
+                 + System.getProperty("file.separator")  + "config.properties";
+
+            Properties prop = PropertyLoader.load(path);
+
+            // Set the default ip server
+            this.textFieldIPServer.setText(
+                prop.getProperty("ip_server", DEFAULT_IP));
+
+            // Set the default port server
+            this.spinnerPortServer.setValue(
+                new Integer(prop.getProperty("port_server", DEFAULT_PORT)));
+
+            System.out.println("[ OK ] Default settings loaded");
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex);
+        }
     }
 
     private void getCleFromFile(String keyname)
@@ -130,8 +129,8 @@ public class MainFrame extends javax.swing.JFrame
 
         int port = (int)this.spinnerPortServer.getValue();
         String ip = this.textFieldIPServer.getText();
-        System.out.println("[ OK ] Tentative de connexion au serveur " +
-                           ip + ":" + port);
+        System.out.println("[ OK ] Start a new connection to server "
+            + ip + ":" + port);
 
         try
         {
@@ -139,29 +138,23 @@ public class MainFrame extends javax.swing.JFrame
         }
         catch (UnknownHostException ex)
         {
-            System.out.println("[FAIL] Hote introuvable. L'IP " + ip + " est invalide");
-            return;
+            System.out.println("[FAIL] Host unreachable. Invalid IP " + ip);
         }
         catch (IOException ex)
         {
-            System.out.println("[FAIL] Impossible de se connecter");
-            return;
+            System.out.println("[FAIL] Failed to connect");
         }
-
-        System.out.println("[ OK ] Connexion etablie");
-
-        this.buttonConnect.setText("Disconnect");
-        this.isConnected = true;
+        finally
+        {
+            this.showStatus();
+        }
     }
 
     private void disconnectFromServer()
     {
-        this.buttonConnect.setText("Connect");
-        this.isConnected = false;
-
         if (this.sock == null)
         {
-            System.out.println("[ OK ] Vous n'etes pas connecte au serveur");
+            System.out.println("[FAIL] You are not connected to the server");
             return;
         }
 
@@ -172,11 +165,34 @@ public class MainFrame extends javax.swing.JFrame
         }
         catch (IOException ex)
         {
-            System.out.println("[FAIL] Une erreur est survenue lors de la deconnexion : " + ex);
+            System.out.println("[FAIL] An error occurred disconnecting the "
+                + "system from the server : " + ex);
         }
         finally
         {
-            System.out.println("[ OK  ] Vous etes deconnecte du serveur");
+            this.showStatus();
+        }
+    }
+
+    private void showStatus()
+    {
+        this.isConnected = this.sock != null && this.sock.isConnected();
+
+        // Enable or disable widgets
+
+        // TODO
+
+        if (this.isConnected)
+        {
+            this.labelStatus.setForeground(Color.GREEN);
+            this.labelStatus.setText("Connected");
+            this.buttonConnect.setText("Disconnect");
+        }
+        else
+        {
+            this.labelStatus.setForeground(Color.RED);
+            this.labelStatus.setText("Disconnected");
+            this.buttonConnect.setText("Connect");
         }
     }
     //</editor-fold>
@@ -192,6 +208,8 @@ public class MainFrame extends javax.swing.JFrame
         labelPortServer = new javax.swing.JLabel();
         spinnerPortServer = new javax.swing.JSpinner();
         buttonConnect = new javax.swing.JButton();
+        labelStatusInfo = new javax.swing.JLabel();
+        labelStatus = new javax.swing.JLabel();
         buttonClear = new javax.swing.JButton();
         splitPane = new javax.swing.JSplitPane();
         tabbedPane = new javax.swing.JTabbedPane();
@@ -216,20 +234,43 @@ public class MainFrame extends javax.swing.JFrame
         textAreaOutput = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("Secure Document Client");
+        setTitle("Secure Documents Client");
+
+        panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        java.awt.GridBagLayout panelHeaderLayout = new java.awt.GridBagLayout();
+        panelHeaderLayout.columnWidths = new int[] {0, 3, 0, 3, 0};
+        panelHeaderLayout.rowHeights = new int[] {0, 3, 0, 3, 0};
+        panelHeader.setLayout(panelHeaderLayout);
 
         labelIPServer.setText("IP Address : ");
-        panelHeader.add(labelIPServer);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelHeader.add(labelIPServer, gridBagConstraints);
 
+        textFieldIPServer.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         textFieldIPServer.setPreferredSize(new java.awt.Dimension(100, 28));
-        panelHeader.add(textFieldIPServer);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelHeader.add(textFieldIPServer, gridBagConstraints);
 
         labelPortServer.setText("Port :");
-        panelHeader.add(labelPortServer);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelHeader.add(labelPortServer, gridBagConstraints);
 
         spinnerPortServer.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
         spinnerPortServer.setPreferredSize(new java.awt.Dimension(100, 28));
-        panelHeader.add(spinnerPortServer);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridy = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        panelHeader.add(spinnerPortServer, gridBagConstraints);
 
         buttonConnect.setText("<state>");
         buttonConnect.addActionListener(new java.awt.event.ActionListener()
@@ -239,7 +280,28 @@ public class MainFrame extends javax.swing.JFrame
                 buttonConnectActionPerformed(evt);
             }
         });
-        panelHeader.add(buttonConnect);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.gridheight = 5;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        panelHeader.add(buttonConnect, gridBagConstraints);
+
+        labelStatusInfo.setText("Status :");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
+        panelHeader.add(labelStatusInfo, gridBagConstraints);
+
+        labelStatus.setText("<status>");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
+        panelHeader.add(labelStatus, gridBagConstraints);
 
         getContentPane().add(panelHeader, java.awt.BorderLayout.PAGE_START);
 
@@ -396,28 +458,29 @@ public class MainFrame extends javax.swing.JFrame
     {//GEN-HEADEREND:event_buttonGetDocumentActionPerformed
         try
         {
+            // Check if client is connected
             if (this.sock == null || !this.sock.isConnected())
-                throw new Exception("Vous n'etes pas connecte au serveur");
+                throw new Exception("You are disconnected from server");
 
             if (this.textFieldDocumentName.getText().isEmpty())
-                throw new Exception("Vous devez renseigner un nom de fichier");
+                throw new Exception("Document name is missing");
 
             if (this.checkBoxEncrypt.isSelected() &&
                 this.textFieldCipherKeyName.getText().isEmpty())
-                throw new Exception("Vous devez renseigner le nom de la cle utilisee pour chiffrer");
+                throw new Exception("Cipher key name is missing");
 
             if (this.checkBoxAuthentication.isSelected() &&
                 this.textFieldAuthenticationKeyName.getText().isEmpty())
-                throw new Exception("Vous devez renseigner le nom de la cle utilisee pour authentifier");
+                throw new Exception("Authentication key name is missing");
         }
         catch (Exception e)
         {
             System.out.println("[FAIL] " + e.getMessage());
-            MessageBoxes.ShowError(e.getMessage(), "Données manquantes");
+            MessageBoxes.ShowError(e.getMessage(), "Error");
             return;
         }
 
-        System.out.println("[ OK ] Construction de la requete...");
+        System.out.println("[ OK ] Build query ...");
         Request reply, requ = new Request("GET_DOCUMENT");
 
         // Ajout du nom du fichier
@@ -453,11 +516,11 @@ public class MainFrame extends javax.swing.JFrame
 
         reply = requ.sendAndRecv(this.sock);
 
-        if (reply.getCommand().compareToIgnoreCase("GET_DOCUMENT_ACK") == 0)
+        if (reply.is("GET_DOCUMENT_ACK"))
         {
             int currentIndex = 0;
             String content = reply.getStringArg(currentIndex);
-            System.out.println("[ RQ ] Texte recu : " + content);
+            System.out.println("[ RQ ] Received : " + content);
 
             // décryptage du text
             if (this.checkBoxEncrypt.isSelected())
@@ -468,7 +531,7 @@ public class MainFrame extends javax.swing.JFrame
                 this.chiffrement.init(this.cle);
 
                 content = this.chiffrement.decrypte(content);
-                System.out.println("[ RQ ] Texte decrypte : " + content);
+                System.out.println("[ RQ ] Decrypted text : " + content);
             }
 
             // Vérification de l'authentification
@@ -481,9 +544,9 @@ public class MainFrame extends javax.swing.JFrame
                 this.authentication.init(this.cle);
 
                 if (this.authentication.verifyAuthenticate(content, hmac))
-                    System.out.println("[ RQ ] Authentification valide");
+                    System.out.println("[ RQ ] Valid authentification");
                 else
-                    System.out.println("[FAIL] Authentification non valide");
+                    System.out.println("[FAIL] Invalid authentication");
             }
 
             if (this.checkBoxIntegrity.isSelected())
@@ -493,21 +556,22 @@ public class MainFrame extends javax.swing.JFrame
                     (String)this.comboBoxIntegrityProviders.getSelectedItem());
 
                 if (this.integrity.verifyCheck(content, hash))
-                    System.out.println("[ RQ ] Integrite valide");
+                    System.out.println("[ RQ ] Valid integrity");
                 else
-                    System.out.println("[FAIL] integrite non valide");
+                    System.out.println("[FAIL] Invalid integrity");
             }
         }
-        else if (reply.getCommand().equalsIgnoreCase("GET_DOCUMENT_FAIL"))
+        else if (reply.is("GET_DOCUMENT_FAIL"))
         {
             String cause = reply.getStringArg(0);
             System.out.println("[FAIL] " + cause);
-            MessageBoxes.ShowError(cause, "Erreur de requête");
+            MessageBoxes.ShowError(cause, "Request Error");
         }
-        else if (reply.getCommand().equalsIgnoreCase("NO_COMMAND"))
+        else if (reply.is(Request.NO_COMMAND) || reply.is(Request.SOCK_ERROR))
         {
             this.disconnectFromServer();
-            MessageBoxes.ShowError("Vous avez été déconnecté du serveur", "Déconnexion du serveur");
+            MessageBoxes.ShowError("Disconnected from server",
+                                   "Disconnected from server");
         }
     }//GEN-LAST:event_buttonGetDocumentActionPerformed
 
@@ -536,6 +600,8 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JLabel labelIPServer;
     private javax.swing.JLabel labelIntegrityProvider;
     private javax.swing.JLabel labelPortServer;
+    private javax.swing.JLabel labelStatus;
+    private javax.swing.JLabel labelStatusInfo;
     private javax.swing.JPanel panelGetDocuments;
     private javax.swing.JPanel panelHeader;
     private javax.swing.JScrollPane scrollPane;
@@ -551,7 +617,6 @@ public class MainFrame extends javax.swing.JFrame
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Private variables">
-    private Properties prop;
     private Socket sock;
     private boolean isConnected;
 

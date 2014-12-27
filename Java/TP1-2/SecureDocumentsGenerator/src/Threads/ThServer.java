@@ -29,10 +29,11 @@ public class ThServer extends Thread
         this.port_server   = port;
         this.stopRequested = false;
         this.socketServer  = null;
+        this.socketClient  = null;
         this.parent        = parent;
     }
     // </editor-fold>
-    
+
     // <editor-fold defaultstate="collapsed" desc=" Overrided Methods ">
     @Override
     public void run()
@@ -40,96 +41,98 @@ public class ThServer extends Thread
         try
         {
             this.socketServer = new ServerSocket(this.port_server);
-            System.out.println("[ OK ] Serveur demarre sur le port " + this.port_server);
+            System.out.println("[ OK ] Server started on port " + this.port_server);
         }
         catch (IOException ex)
         {
             System.err.println(ex);
             System.exit(1);
         }
-        
-        // Boucle principale
-        while (!stopRequested)
+
+        // Main loop
+        while (!this.stopRequested)
         {
             try
             {
-                System.out.println("[ OK ] Serveur en attente de connexion");
+                System.out.println("[ OK ] Waiting client");
                 this.socketClient = this.socketServer.accept();
                 this.clientStop = false;
-                System.out.println("[ OK ] Connexion d'un client");
-                
+                System.out.println("[ OK ] New client connected");
+
                 while(!clientStop)
                 {
                     // Réception de la requete
                     GDOCP query = new GDOCP(Request.recv(socketClient));
-                    System.out.println("[ RQ ] Requete recue : " + query.getCommand());
-                    
+                    System.out.println("[ RQ ] Query received : " + query.getCommand());
+
                     Request reply = new Request();
-                    
+
                     // Requete de demande de document
                     if(query.getCommand().compareToIgnoreCase("GET_DOCUMENT") == 0)
                     {
-                        System.out.println("[ RQ ] Demande du document : " + query.getFileName());
-                        
+                        System.out.println("[ RQ ] Requested document : " + query.getFileName());
+
                         // Vérifie si le docuement demandé existe
                         if (!isFileExists(textsFolderPath + query.getFileName()))
                         {
+                            System.out.println("[FAIL] Document " + query.getFileName() + " not found");
+
                             reply.setCommand("GET_DOCUMENT_FAIL");
-                            reply.addArg("Document " + query.getFileName() + " inexistant");
+                            reply.addArg("Document " + query.getFileName() + " not found");
                             reply.send(socketClient);
                             continue;
                         }
-                        
+
                         // Vérifie si la clé de chiffrement existe
                         if (query.isChiffrementRequested())
                         {
                             System.out.println(
-                                "[ RQ ] Demande de chiffrement (cle = " 
-                                + query.getCleChiffrement() + ", Provider = " 
+                                "[ RQ ] Encryption requested (key = "
+                                + query.getCleChiffrement() + ", Provider = "
                                 + query.getProviderChiffrement() + ")");
-                            
+
                             // Si la clé de chiffrement n'existe pas
                             if (!isKeyExists(query.getCleChiffrement()))
                             {
-                                System.out.println("[ RQ ] La cle " + query.getCleChiffrement() + " est inexistante");
-                                
+                                System.out.println("[FAIL] Key " + query.getCleChiffrement() + " not found");
+
                                 reply.setCommand("GET_DOCUMENT_FAIL");
-                                reply.addArg("Cle de chiffrement " + query.getCleChiffrement() + " inexistante");
+                                reply.addArg("Cipher key " + query.getCleChiffrement() + " not found");
                                 reply.send(socketClient);
                                 continue;
                             }
                         }
-                        
+
                         // Vérifie si la clé d'authentification existe
                         if (query.isAuthenticationRequested())
                         {
                             System.out.println(
-                                "[ RQ ] Demande d'authentification (cle = " 
-                                + query.getCleAuthentication() + ", Provider = " 
+                                "[ RQ ] Authentication requested (key = "
+                                + query.getCleAuthentication() + ", Provider = "
                                 + query.getProviderAuthentication() + ")");
-                            
+
                             // Si la clé d'authentification n'existe pas
                             if (!isKeyExists(query.getCleAuthentication()))
                             {
-                                System.out.println("[ RQ ] La cle " + query.getCleAuthentication() + " est inexistante");
-                                
+                                System.out.println("[ RQ ] Key " + query.getCleAuthentication() + " not found");
+
                                 reply.setCommand("GET_DOCUMENT_FAIL");
-                                reply.addArg("Cle d'authentification " + query.getCleAuthentication() + " inexistante");
+                                reply.addArg("Authentication key " + query.getCleAuthentication() + " not found");
                                 reply.send(socketClient);
                                 continue;
                             }
                         }
-                        
+
                         if (query.isIntegrityRequested())
-                            System.out.println("[ RQ ] Demande de controle d'integrite (Provider = " + query.getProviderIntegrity() + ")");
-                        
+                            System.out.println("[ RQ ] Integrity checking requested (Provider = " + query.getProviderIntegrity() + ")");
+
                         // Construction de la réponse
                         reply.setCommand("GET_DOCUMENT_ACK");
                         reply.clearArgs();
-                        
+
                         // Récupérer le text
                         String content = this.getFileContent(textsFolderPath + query.getFileName());
-                        
+
                         // Ajout du text clair/chiffré selon la demande
                         if (query.isChiffrementRequested())
                         {
@@ -137,12 +140,12 @@ public class ThServer extends Thread
                                 query.getProviderChiffrement());
                             this.getCleFromFile(query.getCleChiffrement());
                             this.chiffrement.init(this.cle);
-                            
+
                             reply.addArg(this.chiffrement.crypte(content));
                         }
                         else
                             reply.addArg(content);
-                        
+
                         // Ajout de l'authentification
                         if (query.isAuthenticationRequested())
                         {
@@ -150,19 +153,19 @@ public class ThServer extends Thread
                                 query.getProviderAuthentication());
                             this.getCleFromFile(query.getCleAuthentication());
                             this.authentication.init(this.cle);
-                            
+
                             reply.addArg(this.authentication.makeAuthenticate(content));
                         }
-                        
+
                         // Ajout de l'intégrité
                         if (query.isIntegrityRequested())
                         {
                             this.integrity = CIAManager.getIntegrity(
                                 query.getProviderIntegrity());
-                            
+
                             reply.addArg(this.integrity.makeCheck(content));
                         }
-                        
+
                         // Envoyer requete
                         reply.send(socketClient);
                     }
@@ -171,32 +174,32 @@ public class ThServer extends Thread
                         this.clientStop = true;
                     }
                 }
-                
-                System.out.println("[ OK ] Fin de connexion avec le client");
+
+                System.out.println("[ OK ] Client disconnected");
                 this.socketClient.close();
                 this.socketClient = null;
             }
             catch (IOException ex)
             {
-                System.out.println("[ OK ] Interruption recue");
+                System.out.println("[ OK ] Interrupted. Stop wating client");
             }
         }
-        
+
         // Free resources
     }
     // </editor-fold>
-    
+
     // <editor-fold defaultstate="collapsed" desc=" méthodes privées ">
     private boolean isKeyExists(String keyFilename)
     {
         return this.isFileExists(keysFolderPath + keyFilename);
     }
-    
+
     private boolean isFileExists(String filname)
     {
         return new File(filname).exists();
     }
-    
+
     private String getFileContent(String filepath)
     {
         try
@@ -208,14 +211,14 @@ public class ThServer extends Thread
             return "";
         }
     }
-    
+
     private void getCleFromFile(String keyname)
     {
         try
         {
             final FileInputStream fis = new FileInputStream(keysFolderPath + keyname);
             ObjectInputStream ois = new ObjectInputStream(fis);
-            
+
             try
             {
                 this.cle = (Cle) ois.readObject();
@@ -239,39 +242,39 @@ public class ThServer extends Thread
             this.cle = null;
         }
     }
-    
+
     // </editor-fold>
-    
+
     public synchronized void requestStop() throws IOException
     {
         this.stopRequested = true;
-        
+
         if (this.socketClient != null && this.socketClient.isConnected())
             this.socketClient.close();
-        
+
         this.socketServer.close();
     }
-    
+
     // <editor-fold defaultstate="collapsed" desc=" Variables privées ">
     private final int port_server;
     private boolean stopRequested;
     private boolean clientStop;
-    
+
     private ServerSocket socketServer;
     private Socket socketClient;
-    
+
     private Chiffrement chiffrement;
     private Cle cle;
     private Authentication authentication;
     private Integrity integrity;
-    
+
     private final MainFrame parent;
     // </editor-fold>
-    
+
     // <editor-fold defaultstate="collapsed" desc=" Variables statiques ">
     private static final String keysFolderPath;
     private static final String textsFolderPath;
-    
+
     static
     {
         keysFolderPath = "KEYS" + System.getProperty("file.separator");
