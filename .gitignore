@@ -2,13 +2,6 @@
 *.user
 *.pri
 build*/
-/Java/MyLittleCheapLibrary/nbproject/private/
-/Java/MyLittleCheapLibrary/dist/
-/Java/SecureDocumentsGenerator/nbproject/private/
-/Java/SecureDocumentsGenerator/dist/
-/Java/SecureDocumentsClient/nbproject/private/
-/Java/SecureDocumentsClient/dist/
-/Java/ClientDH/nbproject/private/
-/Java/ServerDH/nbproject/private/
-/Java/ClientDH/dist/
-/Java/ServerDH/dist/
+private/
+dist/
+
