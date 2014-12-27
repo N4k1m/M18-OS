@@ -46,44 +46,43 @@ ThreadServerPool::ThreadServerPool(int port, int threadsClientCount, QObject* pa
 
 ThreadServerPool::~ThreadServerPool(void)
 {
+    this->requestStop();
+
     // Delete threads client
     foreach (ThreadClient* threadClient, this->_threadsClient)
-    {
-        if (threadClient->isRunning())
-        {
-            threadClient->terminate();
-            threadClient->wait();
-        }
-
         delete threadClient;
-    }
 
-    delete _socketClient;
-    _socketClient = NULL;
-
-    delete _socketServer;
-    _socketServer = NULL;
+    delete this->_socketClient;
+    delete this->_socketServer;
 }
 
 void ThreadServerPool::requestStop(void)
 {
-    QMutexLocker locker(&_mutex);
-    _stopRequested = true;
+    QMutexLocker locker(&this->_mutex);
+    this->_stopRequested = true;
 
     // Request stop for all threads client
     foreach (ThreadClient* threadClient, this->_threadsClient)
         threadClient->requestStop();
 
-    // Wake all threads client
+    // Wake all threads client which could be blocked on QWaitCondition
     clientsIsNotEmpty.wakeAll();
 
     // Wait until all threads client stop
     foreach (ThreadClient* threadClient, this->_threadsClient)
             threadClient->wait();
 
+    // Free client sockets
+    conditionMutex.lock();
+    clients.clear();
+    conditionMutex.unlock();
+
     // Interrupt server blocking function
-    if (_socketServer != NULL && _socketServer->isValid())
-        _socketServer->close();
+    if (this->_socketServer != NULL && this->_socketServer->isValid())
+    {
+        delete this->_socketServer; // Shutdown and close
+        this->_socketServer = NULL;
+    }
 }
 
 void ThreadServerPool::threadClientStarted(void)

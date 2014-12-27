@@ -2,6 +2,8 @@
 #define THREADSERVEUR_HPP
 
 #include <QThread>
+#include <QMutex>
+#include <QMutexLocker>
 
 // Networking
 #include "../Utils/Sockets/TCPSocketClient.hpp"

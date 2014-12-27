@@ -3,6 +3,8 @@
 
 #include <QThread>
 #include <QWaitCondition>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QList>
 
 // Networking

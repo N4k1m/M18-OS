@@ -21,7 +21,10 @@ void ThreadClient::requestStop(void)
 
     // Interrupt client blocking function
     if (this->_socketClient != NULL && this->_socketClient->isValid())
-        this->_socketClient->close();
+    {
+        delete this->_socketClient; // Shutdown and close
+        this->_socketClient = NULL;
+    }
 }
 
 void ThreadClient::run(void)
