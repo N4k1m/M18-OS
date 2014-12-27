@@ -90,7 +90,8 @@ void Widget::on_pushButtonConnect_clicked()
             this->setWidgetsEnable(true);
         else
         {
-            this->disconnectFromServer();
+            delete this->client_sock;
+            this->client_sock = NULL;
             QMessageBox::critical(this, "Login failed",
                                   QString::fromStdString(protocolManager.getHeaderValue("cause")));
         }

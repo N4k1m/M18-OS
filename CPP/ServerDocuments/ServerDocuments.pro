@@ -25,7 +25,8 @@ HEADERS += MainWindow.hpp \
     ../Utils/Parser/IniParser.hpp \
     ../Utils/Exceptions/Exception.hpp \
     ThreadServer.hpp \
-    ThreadServerPool.hpp
+    ThreadServerPool.hpp \
+    ThreadClient.hpp
 FORMS += MainWindow.ui
 SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Sockets/Socket.cpp \
@@ -39,7 +40,8 @@ SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Parser/IniParser.cpp \
     ../Utils/Exceptions/Exception.cpp \
     ThreadServer.cpp \
-    ThreadServerPool.cpp
+    ThreadServerPool.cpp \
+    ThreadClient.cpp
 
 DISTFILES += \
     server_documents.conf \
