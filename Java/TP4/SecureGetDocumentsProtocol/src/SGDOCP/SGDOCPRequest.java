@@ -12,15 +12,15 @@ import java.util.ArrayList;
  *
  * @author Nakim
  */
-public class RequestSGDOCP implements Serializable
+public class SGDOCPRequest implements Serializable
 {
     //<editor-fold defaultstate="collapsed" desc="Constructor">
-    public RequestSGDOCP()
+    public SGDOCPRequest()
     {
         this(SGDOCPCommand.NO_COMMAND);
     }
 
-    public RequestSGDOCP(SGDOCPCommand command)
+    public SGDOCPRequest(SGDOCPCommand command)
     {
         this.command = command;
         this.args = new ArrayList<>();
@@ -103,35 +103,35 @@ public class RequestSGDOCP implements Serializable
         }
     }
 
-    public static RequestSGDOCP recv(Socket socketClient)
+    public static SGDOCPRequest recv(Socket socketClient)
     {
         if (socketClient == null || !socketClient.isConnected())
-            return new RequestSGDOCP(); // SGDOCPCommand == NO_COMMAND
+            return new SGDOCPRequest(); // SGDOCPCommand == NO_COMMAND
 
         try
         {
             ObjectInputStream in = new ObjectInputStream(socketClient.getInputStream());
-            RequestSGDOCP request = (RequestSGDOCP)in.readObject();
+            SGDOCPRequest request = (SGDOCPRequest)in.readObject();
 
             return request;
         }
         catch (IOException | ClassNotFoundException ex)
         {
             //System.err.println("Receipt error : " + ex);
-            return new RequestSGDOCP(); // SGDOCPCommand == NO_COMMAND
+            return new SGDOCPRequest(); // SGDOCPCommand == NO_COMMAND
         }
     }
 
-    public RequestSGDOCP sendAndRecv(Socket socketClient)
+    public SGDOCPRequest sendAndRecv(Socket socketClient)
     {
         if (this.send(socketClient))
-            return RequestSGDOCP.recv(socketClient);
-        return new RequestSGDOCP(); // SGDOCPCommand == NO_COMMAND
+            return SGDOCPRequest.recv(socketClient);
+        return new SGDOCPRequest(); // SGDOCPCommand == NO_COMMAND
     }
 
     public static boolean quickSend(SGDOCPCommand command, Socket socketClient)
     {
-        RequestSGDOCP request = new RequestSGDOCP(command);
+        SGDOCPRequest request = new SGDOCPRequest(command);
         return request.send(socketClient);
     }
 
@@ -139,7 +139,7 @@ public class RequestSGDOCP implements Serializable
                                     String argument,
                                     Socket socketClient)
     {
-        RequestSGDOCP request = new RequestSGDOCP(command);
+        SGDOCPRequest request = new SGDOCPRequest(command);
         request.addArg(argument);
         return request.send(socketClient);
     }
