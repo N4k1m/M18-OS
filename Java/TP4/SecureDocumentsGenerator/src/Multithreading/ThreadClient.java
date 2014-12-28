@@ -15,7 +15,7 @@ public class ThreadClient extends Thread
 
         this.tasks = tasks;
         this.currentTask = null;
-        this.isStopped = false;
+        this.isStopped = true;
     }
     //</editor-fold>
 
@@ -23,6 +23,8 @@ public class ThreadClient extends Thread
     @Override
     public void run()
     {
+        this.isStopped = false;
+        
         while(!this.isStopped())
         {
             try
