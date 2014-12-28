@@ -6,7 +6,7 @@ package GMC;
  */
 public interface TaskQueue
 {
-    public Runnable dequeue(Runnable task);
+    public void enqueue(Runnable task);
+    public Runnable dequeue();
     public boolean isEmpty();
-    public void enqueue();
 }
