@@ -9,4 +9,5 @@ public interface TaskQueue
     public void enqueue(Runnable task);
     public Runnable dequeue();
     public boolean isEmpty();
+    public boolean isFull();
 }
