@@ -64,7 +64,7 @@
 
           <Layout class="org.netbeans.modules.form.compat2.layouts.DesignGridLayout">
             <Property name="columns" type="int" value="2"/>
-            <Property name="rows" type="int" value="2"/>
+            <Property name="rows" type="int" value="3"/>
           </Layout>
           <SubComponents>
             <Component class="javax.swing.JLabel" name="labelStatusTitle">
@@ -83,6 +83,23 @@
               </Properties>
             </Component>
             <Component class="javax.swing.JSpinner" name="spinnerPort">
+              <Properties>
+                <Property name="model" type="javax.swing.SpinnerModel" editor="org.netbeans.modules.form.editors2.SpinnerModelEditor">
+                  <SpinnerModel initial="0" numberType="java.lang.Integer" stepSize="1" type="number"/>
+                </Property>
+              </Properties>
+            </Component>
+            <Component class="javax.swing.JLabel" name="labelThreadsPool">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="Thread(s) pool :"/>
+              </Properties>
+            </Component>
+            <Component class="javax.swing.JSpinner" name="spinnerThreadsCount">
+              <Properties>
+                <Property name="model" type="javax.swing.SpinnerModel" editor="org.netbeans.modules.form.editors2.SpinnerModelEditor">
+                  <SpinnerModel initial="1" minimum="1" numberType="java.lang.Integer" stepSize="1" type="number"/>
+                </Property>
+              </Properties>
             </Component>
           </SubComponents>
         </Container>

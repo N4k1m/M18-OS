@@ -92,6 +92,11 @@ public class MainFrame extends javax.swing.JFrame
             this.spinnerPort.setValue(
                 new Integer(prop.getProperty("port_server", DEFAULT_PORT)));
 
+            // Set default threads client count
+            this.spinnerThreadsCount.setValue(
+                new Integer(prop.getProperty("threads_count",
+                                             DEFAULT_THREADS_COUNT)));
+
             System.out.println("[ OK ] Default settings loaded");
         }
         catch (IOException ex)
@@ -279,6 +284,8 @@ public class MainFrame extends javax.swing.JFrame
         labelStatus = new javax.swing.JLabel();
         labelPort = new javax.swing.JLabel();
         spinnerPort = new javax.swing.JSpinner();
+        labelThreadsPool = new javax.swing.JLabel();
+        spinnerThreadsCount = new javax.swing.JSpinner();
         buttonClear = new javax.swing.JButton();
         splitPane = new javax.swing.JSplitPane();
         scrollPane = new javax.swing.JScrollPane();
@@ -315,7 +322,7 @@ public class MainFrame extends javax.swing.JFrame
         });
         panelHeader.add(buttonStartStop, java.awt.BorderLayout.LINE_END);
 
-        panelHeaderBody.setLayout(new java.awt.GridLayout(2, 2));
+        panelHeaderBody.setLayout(new java.awt.GridLayout(3, 2));
 
         labelStatusTitle.setText("Status :");
         panelHeaderBody.add(labelStatusTitle);
@@ -325,7 +332,15 @@ public class MainFrame extends javax.swing.JFrame
 
         labelPort.setText("Listening port :");
         panelHeaderBody.add(labelPort);
+
+        spinnerPort.setModel(new javax.swing.SpinnerNumberModel());
         panelHeaderBody.add(spinnerPort);
+
+        labelThreadsPool.setText("Thread(s) pool :");
+        panelHeaderBody.add(labelThreadsPool);
+
+        spinnerThreadsCount.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(1), Integer.valueOf(1), null, Integer.valueOf(1)));
+        panelHeaderBody.add(spinnerThreadsCount);
 
         panelHeader.add(panelHeaderBody, java.awt.BorderLayout.CENTER);
 
@@ -563,6 +578,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JLabel labelSecretMessage;
     private javax.swing.JLabel labelStatus;
     private javax.swing.JLabel labelStatusTitle;
+    private javax.swing.JLabel labelThreadsPool;
     private javax.swing.JPanel panelGenerateAuthenticationKey;
     private javax.swing.JPanel panelGenerateCipherKey;
     private javax.swing.JPanel panelHeader;
@@ -570,6 +586,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JScrollPane scrollPane;
     private javax.swing.JSpinner spinnerCipherKeyLength;
     private javax.swing.JSpinner spinnerPort;
+    private javax.swing.JSpinner spinnerThreadsCount;
     private javax.swing.JSplitPane splitPane;
     private javax.swing.JTabbedPane tabbedPane;
     private javax.swing.JTextArea textAreaOutput;
@@ -599,10 +616,12 @@ public class MainFrame extends javax.swing.JFrame
 
     // <editor-fold defaultstate="collapsed" desc="Static variable">
     private static final String DEFAULT_PORT;
+    private static final String DEFAULT_THREADS_COUNT;
 
     static
     {
         DEFAULT_PORT = "40000";
+        DEFAULT_THREADS_COUNT = "3";
     }
     // </editor-fold>
 }
