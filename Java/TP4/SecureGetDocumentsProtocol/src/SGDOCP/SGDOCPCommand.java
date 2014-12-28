@@ -8,5 +8,7 @@ public enum SGDOCPCommand
 {
     SOCK_ERROR,
     NO_COMMAND,
-    LOGIN
+    FAIL,
+    LOGIN,
+    GET_DOCUMENT
 }
