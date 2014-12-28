@@ -1,12 +1,12 @@
 package GUI;
 
+import Multithreading.ThreadServer;
 import MyLittleCheapLibrary.CIAManager;
 import SPF.Authentication.Authentication;
 import SPF.ByteArrayList;
 import SPF.Cle;
 import SPF.Crypto.Chiffrement;
 import SPF.Integrity.Integrity;
-import Threads.ThServer;
 import Utils.MessageBoxes;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
@@ -112,7 +112,8 @@ public class MainFrame extends javax.swing.JFrame
 
         // Start thread
         int port = (int)this.spinnerPort.getValue();
-        this.threadServer = new ThServer(this, port);
+        int threadsCount = (int)this.spinnerThreadsCount.getValue();
+        this.threadServer = new ThreadServer(port, threadsCount, 10, null);
         this.threadServer.start();
         this.showStatus();
     }
@@ -358,6 +359,7 @@ public class MainFrame extends javax.swing.JFrame
 
         splitPane.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
 
+        textAreaOutput.setEditable(false);
         scrollPane.setViewportView(textAreaOutput);
 
         splitPane.setBottomComponent(scrollPane);
@@ -596,7 +598,7 @@ public class MainFrame extends javax.swing.JFrame
 
     // <editor-fold defaultstate="collapsed" desc="Private variables">
     private boolean isRunning;
-    private ThServer threadServer;
+    private ThreadServer threadServer;
 
     // Models
     private SpinnerNumberModel defaultSpinnerModel;
