@@ -52,6 +52,11 @@ public class ThreadPool
         });
     }
 
+    public synchronized boolean isStopped()
+    {
+        return this.isStopped;
+    }
+
     public synchronized void execute(Runnable task) throws InterruptedException
     {
         if (this.isStopped)
