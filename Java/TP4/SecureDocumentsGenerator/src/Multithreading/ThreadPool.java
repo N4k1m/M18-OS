@@ -32,7 +32,7 @@ public class ThreadPool
 
         // Instantiate threads
         for (int i = 0; i < this.threadsCount; i++)
-            this.threads.add(new ThreadClient("Th" + threadsCount, this.taskQueue));
+            this.threads.add(new ThreadClient("Th" + i, this.taskQueue));
 
         // Start threads
         threads.stream().forEach((threadClient) ->
