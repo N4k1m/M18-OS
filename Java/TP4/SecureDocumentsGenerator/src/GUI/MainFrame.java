@@ -1,5 +1,6 @@
 package GUI;
 
+import GMC.EventTracker;
 import Multithreading.ThreadServer;
 import MyLittleCheapLibrary.CIAManager;
 import SPF.Authentication.Authentication;
@@ -27,6 +28,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  * @author Nakim
  */
 public class MainFrame extends javax.swing.JFrame
+                       implements EventTracker
 {
     //<editor-fold defaultstate="collapsed" desc="Constructor">
     public MainFrame()
@@ -113,7 +115,7 @@ public class MainFrame extends javax.swing.JFrame
         // Start thread
         int port = (int)this.spinnerPort.getValue();
         int threadsCount = (int)this.spinnerThreadsCount.getValue();
-        this.threadServer = new ThreadServer(port, threadsCount, 10, null);
+        this.threadServer = new ThreadServer(port, threadsCount, 10, this);
         this.threadServer.start();
         this.showStatus();
     }
@@ -270,6 +272,14 @@ public class MainFrame extends javax.swing.JFrame
         {
             System.err.println(ex);
         }
+    }
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Overrided methods">
+    @Override
+    public void manageEvent(String event)
+    {
+        System.out.println(event);
     }
     //</editor-fold>
 

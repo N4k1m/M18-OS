@@ -55,14 +55,14 @@ public class ThreadServer extends Thread
         {
             try
             {
-                System.out.println("[ OK ] Waiting client");
+                parent.manageEvent("[ OK ] Waiting client");
                 this.socketClient = this.socketServer.accept();
-                System.out.println("[ OK ] New client connected");
-                this.socketClient.close();
+                parent.manageEvent("[ OK ] New client connected");
             }
             catch (IOException ex)
             {
-                System.out.println("[ OK ] Interrupted. Stop waiting client");
+                parent.manageEvent("[ OK ] Thread server Interrupted."
+                    + " Stop waiting client");
                 continue;
             }
         }
@@ -70,7 +70,7 @@ public class ThreadServer extends Thread
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Public methods">
-    public synchronized void requestStop() throws IOException, InterruptedException
+    public synchronized void requestStop() throws IOException
     {
         this.isStopped = true;
 
