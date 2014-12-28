@@ -24,18 +24,20 @@ public class ThreadClient extends Thread
     public void run()
     {
         this.isStopped = false;
-        
+
+        System.out.println("[ OK ] " + this.getName() + " started");
         while(!this.isStopped())
         {
             try
             {
                 this.currentTask = tasks.dequeue();
+                System.out.println("[ OK ] " + this.getName() + " run task");
                 this.currentTask.run();
             }
             catch (InterruptedException ex)
             {
                 //log or otherwise report exception,
-                System.err.println(ex);
+                System.out.println("[ OK ] " + this.getName() + " : Interrupted. Stop wating task");
 
                 //but keep pool thread alive.
             }
@@ -57,7 +59,7 @@ public class ThreadClient extends Thread
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Private variables">
-    private TaskQueue tasks;
+    private final TaskQueue tasks;
     private Runnable currentTask;
 
     private boolean isStopped;
