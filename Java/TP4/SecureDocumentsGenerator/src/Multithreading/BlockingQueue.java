@@ -35,10 +35,8 @@ public class BlockingQueue implements TaskQueue
     @Override
     public synchronized Runnable dequeue() throws InterruptedException
     {
-        // No need this, queue is a synchronizedList
-        
-        //while(this.isEmpty())
-          //  wait();
+        while(this.isEmpty())
+            wait();
 
         if (this.isFull())
             notifyAll();
