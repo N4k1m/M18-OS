@@ -384,6 +384,7 @@ public class MainFrame extends javax.swing.JFrame
         getContentPane().add(buttonClear, java.awt.BorderLayout.PAGE_END);
 
         splitPane.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
+        splitPane.setOneTouchExpandable(true);
 
         textAreaOutput.setEditable(false);
         scrollPane.setViewportView(textAreaOutput);

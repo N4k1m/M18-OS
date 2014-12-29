@@ -4,6 +4,7 @@ import MyLittleCheapLibrary.CIAManager;
 import SGDOCP.SGDOCPCommand;
 import SGDOCP.SGDOCPRequest;
 import SPF.Authentication.Authentication;
+import SPF.Authentication.SymmetricKey;
 import SPF.Cle;
 import SPF.Crypto.Chiffrement;
 import SPF.Integrity.Integrity;
@@ -12,12 +13,21 @@ import Utils.MessageBoxes;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
+import java.awt.Component;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Properties;
+import javax.crypto.KeyAgreement;
+import javax.crypto.interfaces.DHPublicKey;
+import javax.crypto.spec.DHParameterSpec;
 import javax.swing.DefaultComboBoxModel;
 
 /**
@@ -79,10 +89,13 @@ public class MainFrame extends javax.swing.JFrame
             // Set the default ip server
             this.textFieldIPServer.setText(
                 prop.getProperty("ip_server", DEFAULT_IP));
-
             // Set the default port server
             this.spinnerPortServer.setValue(
                 new Integer(prop.getProperty("port_server", DEFAULT_PORT)));
+            // Set default login
+            this.textFieldLogin.setText(prop.getProperty("login"));
+            // Set default password
+            this.passwordField.setText(prop.getProperty("password"));
 
             System.out.println("[ OK ] Default settings loaded");
         }
@@ -137,9 +150,8 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.sock = new Socket(ip, port);
 
-            // TODO : faire les opérations de login
-
-            SGDOCPRequest.quickSend(SGDOCPCommand.LOGIN, this.sock);
+            // Throws exception if an error occured
+            this.loginProcedure();
         }
         catch (UnknownHostException ex)
         {
@@ -148,6 +160,12 @@ public class MainFrame extends javax.swing.JFrame
         catch (IOException ex)
         {
             System.out.println("[FAIL] Failed to connect");
+        }
+        catch (Exception e)
+        {
+            System.out.println("[FAIL] Login failed : " + e.getMessage());
+            MessageBoxes.ShowError(e.getMessage(), "Login failed");
+            this.disconnectFromServer();
         }
         finally
         {
@@ -185,7 +203,17 @@ public class MainFrame extends javax.swing.JFrame
 
         // Enable or disable widgets
 
-        // TODO
+        for (Component component : this.panelGetDocuments.getComponents())
+            component.setEnabled(this.isConnected);
+
+        this.labelIPServer.setEnabled(!this.isConnected);
+        this.textFieldIPServer.setEnabled(!this.isConnected);
+        this.labelPortServer.setEnabled(!this.isConnected);
+        this.spinnerPortServer.setEnabled(!this.isConnected);
+        this.labelLogin.setEnabled(!this.isConnected);
+        this.textFieldLogin.setEnabled(!this.isConnected);
+        this.labelPassword.setEnabled(!this.isConnected);
+        this.passwordField.setEnabled(!this.isConnected);
 
         if (this.isConnected)
         {
@@ -199,6 +227,84 @@ public class MainFrame extends javax.swing.JFrame
             this.labelStatus.setText("Disconnected");
             this.buttonConnect.setText("Connect");
         }
+    }
+
+    private void loginProcedure() throws Exception
+    {
+        SGDOCPRequest query = new SGDOCPRequest(SGDOCPCommand.LOGIN);
+        SGDOCPRequest reply;
+
+        // Send LOGIN + username
+        query.addArg(this.textFieldLogin.getText());
+        System.out.println("[ OK ] Send login request");
+        reply = query.sendAndRecv(this.sock);
+
+        // If server closed the connection
+        if (reply.is(SGDOCPCommand.NO_COMMAND) || reply.is(SGDOCPCommand.SOCK_ERROR))
+            throw new Exception("Disconnected from server");
+
+        // If LOGIN failed
+        if (reply.is(SGDOCPCommand.FAIL))
+            throw new Exception(reply.getStringArg(0)); // Arg 0 = cause
+
+        // Invalid reply
+        if (!reply.is(SGDOCPCommand.LOGIN_ACK))
+            throw new Exception("Invalid reply");
+
+        // Get public key from server (Arg 0)
+        X509EncodedKeySpec x509KeySpec =
+            new X509EncodedKeySpec(reply.getArg(0));
+        KeyFactory keyFact = KeyFactory.getInstance("DH");
+        PublicKey publicKey = keyFact.generatePublic(x509KeySpec);
+
+        /* Gets the DH parameters associated with the server public key.
+         * The client must use the same parameters when he generates his
+         * own key pair. */
+        DHParameterSpec dhSpec = ((DHPublicKey)publicKey).getParams();
+
+        System.out.println("[ OK ] Get server params");
+
+        // Creates his own DH key pair
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH");
+        keyGen.initialize(dhSpec);
+
+        KeyPair keypair = keyGen.generateKeyPair();
+
+        /* Prepare to generate the secret key with the client private key
+         * and the server public key */
+        KeyAgreement ka = KeyAgreement.getInstance("DH");
+        ka.init(keypair.getPrivate());
+        ka.doPhase(publicKey, true);
+
+        // Generate new secret key for Authentication
+        SymmetricKey symmetricKey = new SymmetricKey(ka.generateSecret("DES"), 1024);
+        System.out.println("[ OK ] Secret key generated");
+
+        // Get authentication
+        this.authentication = CIAManager.getAuthentication(reply.getStringArg(1));
+        this.authentication.init(symmetricKey);
+
+        // hmac password
+        byte[] hmac = this.authentication.makeAuthenticate(
+            new String(this.passwordField.getPassword()));
+
+        // Send LOGIN + Public Key + HMAC
+        query.clearArgs();
+        query.addArg(keypair.getPublic().getEncoded());
+        query.addArg(hmac);
+
+        System.out.println("[ OK ] Send public key and hmac password");
+        reply = query.sendAndRecv(sock);
+
+        // If LOGIN failed
+        if (reply.is(SGDOCPCommand.FAIL))
+            throw new Exception(reply.getStringArg(0)); // Arg 0 = cause
+
+        // Invalid reply
+        if (!reply.is(SGDOCPCommand.LOGIN_ACK))
+            throw new Exception("Invalid reply");
+
+        System.out.println("[ OK ] Successfully logged in");
     }
     //</editor-fold>
 
@@ -215,6 +321,10 @@ public class MainFrame extends javax.swing.JFrame
         buttonConnect = new javax.swing.JButton();
         labelStatusInfo = new javax.swing.JLabel();
         labelStatus = new javax.swing.JLabel();
+        labelLogin = new javax.swing.JLabel();
+        textFieldLogin = new javax.swing.JTextField();
+        labelPassword = new javax.swing.JLabel();
+        passwordField = new javax.swing.JPasswordField();
         buttonClear = new javax.swing.JButton();
         splitPane = new javax.swing.JSplitPane();
         tabbedPane = new javax.swing.JTabbedPane();
@@ -243,7 +353,7 @@ public class MainFrame extends javax.swing.JFrame
 
         panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
         java.awt.GridBagLayout panelHeaderLayout = new java.awt.GridBagLayout();
-        panelHeaderLayout.columnWidths = new int[] {0, 3, 0, 3, 0};
+        panelHeaderLayout.columnWidths = new int[] {0, 5, 0, 5, 0, 5, 0, 5, 0, 5, 0};
         panelHeaderLayout.rowHeights = new int[] {0, 3, 0, 3, 0};
         panelHeader.setLayout(panelHeaderLayout);
 
@@ -252,29 +362,32 @@ public class MainFrame extends javax.swing.JFrame
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
         panelHeader.add(labelIPServer, gridBagConstraints);
 
-        textFieldIPServer.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         textFieldIPServer.setPreferredSize(new java.awt.Dimension(100, 28));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
         panelHeader.add(textFieldIPServer, gridBagConstraints);
 
         labelPortServer.setText("Port :");
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
         panelHeader.add(labelPortServer, gridBagConstraints);
 
         spinnerPortServer.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(0), Integer.valueOf(0), null, Integer.valueOf(1)));
         spinnerPortServer.setPreferredSize(new java.awt.Dimension(100, 28));
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridx = 6;
+        gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
         panelHeader.add(spinnerPortServer, gridBagConstraints);
 
         buttonConnect.setText("<state>");
@@ -286,7 +399,7 @@ public class MainFrame extends javax.swing.JFrame
             }
         });
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridx = 8;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.gridheight = 5;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
@@ -304,9 +417,38 @@ public class MainFrame extends javax.swing.JFrame
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 0;
+        gridBagConstraints.gridwidth = 5;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.3;
+        panelHeader.add(labelStatus, gridBagConstraints);
+
+        labelLogin.setText("Login : ");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 4;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 0.1;
-        panelHeader.add(labelStatus, gridBagConstraints);
+        panelHeader.add(labelLogin, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 2;
+        gridBagConstraints.gridy = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
+        panelHeader.add(textFieldLogin, gridBagConstraints);
+
+        labelPassword.setText("Password :");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
+        panelHeader.add(labelPassword, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 6;
+        gridBagConstraints.gridy = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.weightx = 0.1;
+        panelHeader.add(passwordField, gridBagConstraints);
 
         getContentPane().add(panelHeader, java.awt.BorderLayout.PAGE_START);
 
@@ -322,6 +464,7 @@ public class MainFrame extends javax.swing.JFrame
 
         splitPane.setDividerLocation(300);
         splitPane.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
+        splitPane.setOneTouchExpandable(true);
 
         panelGetDocuments.setLayout(new java.awt.GridBagLayout());
 
@@ -607,11 +750,14 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JLabel labelDocumentName;
     private javax.swing.JLabel labelIPServer;
     private javax.swing.JLabel labelIntegrityProvider;
+    private javax.swing.JLabel labelLogin;
+    private javax.swing.JLabel labelPassword;
     private javax.swing.JLabel labelPortServer;
     private javax.swing.JLabel labelStatus;
     private javax.swing.JLabel labelStatusInfo;
     private javax.swing.JPanel panelGetDocuments;
     private javax.swing.JPanel panelHeader;
+    private javax.swing.JPasswordField passwordField;
     private javax.swing.JScrollPane scrollPane;
     private javax.swing.JSpinner spinnerPortServer;
     private javax.swing.JSplitPane splitPane;
@@ -621,6 +767,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JTextField textFieldCipherKeyName;
     private javax.swing.JTextField textFieldDocumentName;
     private javax.swing.JTextField textFieldIPServer;
+    private javax.swing.JTextField textFieldLogin;
     // End of variables declaration//GEN-END:variables
     // </editor-fold>
 
