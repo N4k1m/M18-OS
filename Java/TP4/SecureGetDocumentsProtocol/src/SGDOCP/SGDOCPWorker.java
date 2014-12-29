@@ -201,8 +201,9 @@ public class SGDOCPWorker implements Runnable
             {
                 case SOCK_ERROR:
                 case NO_COMMAND:
-                    eventTracker.manageEvent("[ OK ] connection with the client closed");
+                    eventTracker.manageEvent("[ OK ] Connection with the client closed");
                     this.clientStop = true;
+                    break;
                 case GET_DOCUMENT:
                     // TODO manage get document
                     this.manage_GET_DOCULENT();
