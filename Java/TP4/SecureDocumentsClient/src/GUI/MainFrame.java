@@ -1,6 +1,8 @@
 package GUI;
 
 import MyLittleCheapLibrary.CIAManager;
+import SGDOCP.SGDOCPCommand;
+import SGDOCP.SGDOCPRequest;
 import SPF.Authentication.Authentication;
 import SPF.Cle;
 import SPF.Crypto.Chiffrement;
@@ -8,7 +10,6 @@ import SPF.Integrity.Integrity;
 import Utils.BytesConverter;
 import Utils.MessageBoxes;
 import Utils.PropertyLoader;
-import Utils.Request;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.io.FileInputStream;
@@ -135,6 +136,10 @@ public class MainFrame extends javax.swing.JFrame
         try
         {
             this.sock = new Socket(ip, port);
+
+            // TODO : faire les opérations de login
+
+            SGDOCPRequest.quickSend(SGDOCPCommand.LOGIN, this.sock);
         }
         catch (UnknownHostException ex)
         {
@@ -481,7 +486,8 @@ public class MainFrame extends javax.swing.JFrame
         }
 
         System.out.println("[ OK ] Build query ...");
-        Request reply, requ = new Request("GET_DOCUMENT");
+        SGDOCPRequest reply = null;
+        SGDOCPRequest requ  = new SGDOCPRequest(SGDOCPCommand.GET_DOCUMENT);
 
         // Ajout du nom du fichier
         requ.addArg(this.textFieldDocumentName.getText());
@@ -516,7 +522,7 @@ public class MainFrame extends javax.swing.JFrame
 
         reply = requ.sendAndRecv(this.sock);
 
-        if (reply.is("GET_DOCUMENT_ACK"))
+        if (reply.is(SGDOCPCommand.GET_DOCUMENT_ACK))
         {
             int currentIndex = 0;
             String content = reply.getStringArg(currentIndex);
@@ -561,13 +567,14 @@ public class MainFrame extends javax.swing.JFrame
                     System.out.println("[FAIL] Invalid integrity");
             }
         }
-        else if (reply.is("GET_DOCUMENT_FAIL"))
+        else if (reply.is(SGDOCPCommand.FAIL))
         {
             String cause = reply.getStringArg(0);
             System.out.println("[FAIL] " + cause);
             MessageBoxes.ShowError(cause, "Request Error");
         }
-        else if (reply.is(Request.NO_COMMAND) || reply.is(Request.SOCK_ERROR))
+        else if (reply.is(SGDOCPCommand.NO_COMMAND) ||
+                 reply.is(SGDOCPCommand.SOCK_ERROR))
         {
             this.disconnectFromServer();
             MessageBoxes.ShowError("Disconnected from server",

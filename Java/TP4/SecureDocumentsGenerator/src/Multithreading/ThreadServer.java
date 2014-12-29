@@ -1,6 +1,8 @@
 package Multithreading;
 
 import GMC.EventTracker;
+import SGDOCP.SGDOCPCommand;
+import SGDOCP.SGDOCPRequest;
 import Utils.ReturnValue;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -65,6 +67,60 @@ public class ThreadServer extends Thread
                     + " Stop waiting client");
                 continue;
             }
+
+            // New client connected --> get request
+            this.query = SGDOCPRequest.recv(this.socketClient);
+
+            switch(this.query.getCommand())
+            {
+                case SOCK_ERROR:
+                case NO_COMMAND:
+                    parent.manageEvent("[ OK ] Thread server : connection with the client closed");
+                    break;
+                case LOGIN:
+                    parent.manageEvent("[ OK ] Thread server requete login");
+                    this.manageLogin();
+                    break;
+                default:
+                    parent.manageEvent("[FAIL] Invalid query");
+                    this.sendFailReply("Login required");
+                    break;
+            }
+        }
+    }
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Private methods">
+    public void sendFailReply(String cause)
+    {
+        SGDOCPRequest.quickSend(SGDOCPCommand.FAIL, cause, this.socketClient);
+
+        try
+        {
+            this.socketClient.close();
+        }
+        catch (IOException ex)
+        {
+            parent.manageEvent("[FAIL] Thread server failed to send fail query : "
+                               + ex.getMessage());
+        }
+    }
+
+    public void manageLogin()
+    {
+        // Vérifier le login du client
+
+        Runnable worker = this.query.createRunnable(this.socketClient, this.parent);
+
+        try
+        {
+            this.pool.execute(worker);
+        }
+        // if enable to enqueue task because queue is full
+        catch (InterruptedException | IllegalStateException ex)
+        {
+            parent.manageEvent("[FAIL] " + ex.getMessage());
+            this.sendFailReply(ex.getMessage());
         }
     }
     //</editor-fold>
@@ -99,6 +155,8 @@ public class ThreadServer extends Thread
     private boolean isStopped;
 
     private ThreadPool pool;
+
+    private SGDOCPRequest query;
 
     private EventTracker parent; // GUI
     //</editor-fold>
