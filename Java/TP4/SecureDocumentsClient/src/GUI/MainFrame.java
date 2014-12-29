@@ -441,6 +441,7 @@ public class MainFrame extends javax.swing.JFrame
 
         splitPane.setTopComponent(tabbedPane);
 
+        textAreaOutput.setEditable(false);
         scrollPane.setViewportView(textAreaOutput);
 
         splitPane.setRightComponent(scrollPane);
