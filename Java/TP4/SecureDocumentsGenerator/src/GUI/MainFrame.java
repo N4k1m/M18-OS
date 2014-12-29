@@ -99,6 +99,11 @@ public class MainFrame extends javax.swing.JFrame
                 new Integer(prop.getProperty("threads_count",
                                              DEFAULT_THREADS_COUNT)));
 
+            // Set default max queued tasks number
+            this.spinnerMaxQueuedTasks.setValue(
+                new Integer(prop.getProperty("max_queued_tasks",
+                                             DEFAULT_MAX_QUEUED_TASKS)));
+
             System.out.println("[ OK ] Default settings loaded");
         }
         catch (IOException ex)
@@ -115,7 +120,8 @@ public class MainFrame extends javax.swing.JFrame
         // Start thread
         int port = (int)this.spinnerPort.getValue();
         int threadsCount = (int)this.spinnerThreadsCount.getValue();
-        this.threadServer = new ThreadServer(port, threadsCount, 1, this);
+        int maxQueuedTasks = (int)this.spinnerMaxQueuedTasks.getValue();
+        this.threadServer = new ThreadServer(port, threadsCount, maxQueuedTasks, this);
         this.threadServer.start();
         this.showStatus();
     }
@@ -148,6 +154,8 @@ public class MainFrame extends javax.swing.JFrame
                          this.threadServer.isAlive();
 
         this.spinnerPort.setEnabled(!this.isRunning);
+        this.spinnerThreadsCount.setEnabled(!this.isRunning);
+        this.spinnerMaxQueuedTasks.setEnabled(!this.isRunning);
 
         if (this.isRunning)
         {
@@ -297,6 +305,8 @@ public class MainFrame extends javax.swing.JFrame
         spinnerPort = new javax.swing.JSpinner();
         labelThreadsPool = new javax.swing.JLabel();
         spinnerThreadsCount = new javax.swing.JSpinner();
+        jLabel1 = new javax.swing.JLabel();
+        spinnerMaxQueuedTasks = new javax.swing.JSpinner();
         buttonClear = new javax.swing.JButton();
         splitPane = new javax.swing.JSplitPane();
         scrollPane = new javax.swing.JScrollPane();
@@ -333,7 +343,7 @@ public class MainFrame extends javax.swing.JFrame
         });
         panelHeader.add(buttonStartStop, java.awt.BorderLayout.LINE_END);
 
-        panelHeaderBody.setLayout(new java.awt.GridLayout(3, 2));
+        panelHeaderBody.setLayout(new java.awt.GridLayout(4, 2));
 
         labelStatusTitle.setText("Status :");
         panelHeaderBody.add(labelStatusTitle);
@@ -352,6 +362,12 @@ public class MainFrame extends javax.swing.JFrame
 
         spinnerThreadsCount.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(1), Integer.valueOf(1), null, Integer.valueOf(1)));
         panelHeaderBody.add(spinnerThreadsCount);
+
+        jLabel1.setText("Max queued tasks :");
+        panelHeaderBody.add(jLabel1);
+
+        spinnerMaxQueuedTasks.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(1), Integer.valueOf(1), null, Integer.valueOf(1)));
+        panelHeaderBody.add(spinnerMaxQueuedTasks);
 
         panelHeader.add(panelHeaderBody, java.awt.BorderLayout.CENTER);
 
@@ -582,6 +598,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JComboBox<String> comboBoxAlgorithms;
     private javax.swing.JComboBox<String> comboBoxAuthenticationProviders;
     private javax.swing.JComboBox<String> comboBoxCipherProviders;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel labelAlgorithm;
     private javax.swing.JLabel labelAuthenticationProvider;
     private javax.swing.JLabel labelCipherKeyLength;
@@ -597,6 +614,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JPanel panelHeaderBody;
     private javax.swing.JScrollPane scrollPane;
     private javax.swing.JSpinner spinnerCipherKeyLength;
+    private javax.swing.JSpinner spinnerMaxQueuedTasks;
     private javax.swing.JSpinner spinnerPort;
     private javax.swing.JSpinner spinnerThreadsCount;
     private javax.swing.JSplitPane splitPane;
@@ -629,11 +647,13 @@ public class MainFrame extends javax.swing.JFrame
     // <editor-fold defaultstate="collapsed" desc="Static variable">
     private static final String DEFAULT_PORT;
     private static final String DEFAULT_THREADS_COUNT;
+    private static final String DEFAULT_MAX_QUEUED_TASKS;
 
     static
     {
         DEFAULT_PORT = "40000";
         DEFAULT_THREADS_COUNT = "3";
+        DEFAULT_MAX_QUEUED_TASKS = "3";
     }
     // </editor-fold>
 }
