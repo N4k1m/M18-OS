@@ -115,7 +115,7 @@ public class MainFrame extends javax.swing.JFrame
         // Start thread
         int port = (int)this.spinnerPort.getValue();
         int threadsCount = (int)this.spinnerThreadsCount.getValue();
-        this.threadServer = new ThreadServer(port, threadsCount, 10, this);
+        this.threadServer = new ThreadServer(port, threadsCount, 1, this);
         this.threadServer.start();
         this.showStatus();
     }

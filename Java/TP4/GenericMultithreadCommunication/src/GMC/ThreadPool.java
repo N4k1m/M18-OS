@@ -1,6 +1,5 @@
-package Multithreading;
+package GMC;
 
-import GMC.TaskQueue;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,14 +8,13 @@ import java.util.List;
  * @author Nakim
  */
 
-// WARNING : n'est pas un thread mais contient et gère le pool de threads client
+// WARNING : n'est pas un thread mais contient et gère le pool de threads client génériques
 public class ThreadPool
 {
     //<editor-fold defaultstate="collapsed" desc="Constructor">
-    public ThreadPool(int noOfThreads, int maxNoOfTasks)
+    public ThreadPool(int noOfThreads, TaskQueue taskQueue)
     {
-        this.taskQueue = null;
-        this.taskQueueLimit = maxNoOfTasks;
+        this.taskQueue = taskQueue;
 
         this.threads = null;
         this.threadsCount = noOfThreads;
@@ -27,7 +25,7 @@ public class ThreadPool
     public void start()
     {
         this.isStopped = false;
-        this.taskQueue = new BlockingQueue(this.taskQueueLimit);
+        this.taskQueue.clear();
         this.threads = new ArrayList<>();
 
         // Instantiate threads
@@ -57,21 +55,18 @@ public class ThreadPool
         return this.isStopped;
     }
 
-    public synchronized void execute(Runnable task) throws InterruptedException
+    public synchronized void execute(Runnable task) throws InterruptedException,
+                                                           TaskQueueException
     {
         if (this.isStopped)
-            throw new IllegalStateException("Thread pool is stopped");
-
-        if (this.taskQueue.isFull())
-            throw new IllegalStateException("Task queue is full");
+            throw new TaskQueueException("Thread pool is stopped");
 
         this.taskQueue.enqueue(task);
     }
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Private variables">
-    private TaskQueue taskQueue;
-    private final int taskQueueLimit;
+    private final TaskQueue taskQueue;
 
     private List<ThreadClient> threads;
     private final int threadsCount;

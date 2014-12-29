@@ -1,6 +1,4 @@
-package Multithreading;
-
-import GMC.TaskQueue;
+package GMC;
 
 /**
  *
@@ -34,14 +32,14 @@ public class ThreadClient extends Thread
                 System.out.println("[ OK ] " + this.getName() + " run task");
                 this.currentTask.run();
             }
-            catch (InterruptedException ex)
+            catch (InterruptedException | TaskQueueException ex)
             {
                 //log or otherwise report exception,
-                System.out.println("[ OK ] " + this.getName() + " : Interrupted. Stop wating task");
-
                 //but keep pool thread alive.
             }
         }
+
+        System.out.println("[ OK ] " + this.getName() + " : stop wating task");
     }
     //</editor-fold>
 

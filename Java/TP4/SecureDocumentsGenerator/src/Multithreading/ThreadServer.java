@@ -1,6 +1,8 @@
 package Multithreading;
 
+import GMC.ThreadPool;
 import GMC.EventTracker;
+import GMC.TaskQueueException;
 import SGDOCP.SGDOCPCommand;
 import SGDOCP.SGDOCPRequest;
 import Utils.ReturnValue;
@@ -25,8 +27,12 @@ public class ThreadServer extends Thread
         this.socketClient = null;
         this.isStopped = true;
 
+        // Create task queue
+        this.limitedBlockingTaskQueue =
+            new LimitedBlockingTaskQueue(limitQueue, false);
         // Create thread pool
-        this.pool = new ThreadPool(threadsClientCount, limitQueue);
+        this.pool =
+            new ThreadPool(threadsClientCount, this.limitedBlockingTaskQueue);
 
         this.parent = parent;
     }
@@ -116,8 +122,7 @@ public class ThreadServer extends Thread
         {
             this.pool.execute(worker);
         }
-        // if enable to enqueue task because queue is full
-        catch (InterruptedException | IllegalStateException ex)
+        catch (InterruptedException | TaskQueueException ex)
         {
             parent.manageEvent("[FAIL] " + ex.getMessage());
             this.sendFailReply(ex.getMessage());
@@ -155,6 +160,7 @@ public class ThreadServer extends Thread
     private boolean isStopped;
 
     private ThreadPool pool;
+    private LimitedBlockingTaskQueue limitedBlockingTaskQueue;
 
     private SGDOCPRequest query;
 
