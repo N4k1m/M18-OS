@@ -10,4 +10,5 @@ public interface TaskQueue
     public Runnable dequeue()  throws InterruptedException;
     public boolean isEmpty();
     public boolean isFull();
+    public boolean clear();
 }
