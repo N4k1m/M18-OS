@@ -10,5 +10,7 @@ public enum SGDOCPCommand
     NO_COMMAND,
     FAIL,
     LOGIN,
-    GET_DOCUMENT
+    LOGIN_ACK,
+    GET_DOCUMENT,
+    GET_DOCUMENT_ACK
 }
