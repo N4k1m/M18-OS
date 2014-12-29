@@ -55,7 +55,6 @@ public class ThreadServer extends Thread
 
         // Start threads client
         this.pool.start();
-
         this.isStopped = false;
 
         // Main loop
@@ -74,19 +73,44 @@ public class ThreadServer extends Thread
                 continue;
             }
 
-            // New client connected --> get request
-            this.query = SGDOCPRequest.recv(this.socketClient);
+            // Get LOGIN request from protocol SGDOCP
+            try
+            {
+                // New client connected --> get request
+                this.query = SGDOCPRequest.recv(this.socketClient);
+            }
+            catch (ClassCastException ex)
+            {
+                parent.manageEvent("[FAIL] Thread server : client try to use an other protocol");
+                try
+                {
+                    this.socketClient.close();
+                }
+                catch (IOException ex1)
+                {
+                    parent.manageEvent("[FAIL] Thread server failed to send fail query : "
+                               + ex.getMessage());
+                }
+                finally
+                {
+                    continue;
+                }
+            }
 
+            // If the client use the right protocol
             switch(this.query.getCommand())
             {
+                // Connection with the client is closed
                 case SOCK_ERROR:
                 case NO_COMMAND:
-                    parent.manageEvent("[ OK ] Thread server : connection with the client closed");
+                    parent.manageEvent("[ OK ] Thread server : connection with the client is closed");
                     break;
+                // Client want to connect
                 case LOGIN:
                     parent.manageEvent("[ OK ] Thread server requete login");
                     this.manageLogin();
                     break;
+                // Client try to send query before login
                 default:
                     parent.manageEvent("[FAIL] Invalid query");
                     this.sendFailReply("Login required");
