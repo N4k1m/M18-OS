@@ -1,10 +1,11 @@
 package SGDOCP;
 
+import GMC.EventTracker;
+import GMC.Request;
 import Utils.BytesConverter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -12,7 +13,7 @@ import java.util.ArrayList;
  *
  * @author Nakim
  */
-public class SGDOCPRequest implements Serializable
+public class SGDOCPRequest implements Request
 {
     //<editor-fold defaultstate="collapsed" desc="Constructor">
     public SGDOCPRequest()
@@ -153,6 +154,14 @@ public class SGDOCPRequest implements Serializable
     {
         this.clearArgs();
         this.command = SGDOCPCommand.NO_COMMAND;
+    }
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Overrided methods">
+    @Override
+    public Runnable createRunnable(Socket clientSocket, EventTracker eventTracker)
+    {
+        return new SGDOCPWorker(clientSocket, eventTracker);
     }
     //</editor-fold>
 
