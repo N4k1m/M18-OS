@@ -89,7 +89,7 @@ public class SGDOCPWorker implements Runnable
         SGDOCPRequest.quickSend(SGDOCPCommand.FAIL, cause, this.clientSocket);
     }
 
-    private void manage_GET_DOCULENT()
+    private void manage_GET_DOCUMENT()
     {
         SGDOCPRequest reply = new SGDOCPRequest();
 
@@ -206,7 +206,7 @@ public class SGDOCPWorker implements Runnable
                     break;
                 case GET_DOCUMENT:
                     // TODO manage get document
-                    this.manage_GET_DOCULENT();
+                    this.manage_GET_DOCUMENT();
                     break;
                 default:
                     eventTracker.manageEvent("[FAIL] Invalid query");
