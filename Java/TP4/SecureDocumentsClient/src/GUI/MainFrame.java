@@ -353,7 +353,7 @@ public class MainFrame extends javax.swing.JFrame
 
         panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
         java.awt.GridBagLayout panelHeaderLayout = new java.awt.GridBagLayout();
-        panelHeaderLayout.columnWidths = new int[] {0, 5, 0, 5, 0, 5, 0, 5, 0, 5, 0};
+        panelHeaderLayout.columnWidths = new int[] {0, 5, 0, 5, 0, 5, 0, 5, 0};
         panelHeaderLayout.rowHeights = new int[] {0, 3, 0, 3, 0};
         panelHeader.setLayout(panelHeaderLayout);
 
