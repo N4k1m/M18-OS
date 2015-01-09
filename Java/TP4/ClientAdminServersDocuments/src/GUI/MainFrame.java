@@ -1,10 +1,13 @@
 package GUI;
 
+import DOCSAP.DOCSAProtocol;
 import Utils.MessageBoxes;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.awt.Component;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -27,6 +30,8 @@ public class MainFrame extends javax.swing.JFrame
 
         this.loadDefaultSettings();
         this.sock = null;
+        this.dis  = null;
+        this.dos  = null;
 
         this.showStatus();
     }
@@ -112,6 +117,8 @@ public class MainFrame extends javax.swing.JFrame
         try
         {
             this.sock = new Socket(ip, port);
+            this.dis = new DataInputStream(this.sock.getInputStream());
+            this.dos = new DataOutputStream(this.sock.getOutputStream());
 
             // TODO : login procedure
         }
@@ -145,10 +152,25 @@ public class MainFrame extends javax.swing.JFrame
 
         try
         {
+            // Send QUIT request
+            this.sendMessage(DOCSAProtocol.getQUITTrame());
+
             this.sock.close();
             this.sock = null;
+
+            if (this.dis != null)
+            {
+                this.dis.close();
+                this.dis = null;
+            }
+
+            if (this.dos != null)
+            {
+                this.dos.close();
+                this.dos = null;
+            }
         }
-        catch (IOException ex)
+        catch (Exception ex)
         {
             System.out.println("[FAIL] An error occurred disconnecting the "
                 + "system from the server : " + ex);
@@ -157,6 +179,50 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.showStatus();
         }
+    }
+
+    private void sendMessage(String message) throws Exception
+    {
+        try
+        {
+            if (this.sock == null)
+                throw new Exception("You must be logged in");
+
+            this.dos.write(message.getBytes());
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Sending error : " + ex.getMessage());
+        }
+    }
+
+    private String[] receiveSplitMessage() throws Exception
+    {
+        String[] tokens = null;
+
+        byte b;
+        char end = DOCSAProtocol.end_trame.charAt(0);
+
+        StringBuilder buffer = new StringBuilder();
+
+        try
+        {
+            // Receive loop
+            while ((b = this.dis.readByte()) != (byte)end)
+                buffer.append((char)b);
+
+            String reply = buffer.toString();
+            System.out.println("[ OK ] Reply : " + reply);
+            tokens = reply.split("\\" + DOCSAProtocol.sep_trame
+                + "|\\" + DOCSAProtocol.end_trame);
+            System.out.println("Tokens count = " + tokens.length);
+        }
+        catch (IOException ex)
+        {
+            throw new Exception("Receiving error : " + ex.getMessage());
+        }
+
+        return tokens;
     }
     //</editor-fold>
 
@@ -441,6 +507,8 @@ public class MainFrame extends javax.swing.JFrame
 
     //<editor-fold defaultstate="collapsed" desc="Private variables">
     private Socket sock;
+    private DataInputStream  dis;
+    private DataOutputStream dos;
     private boolean isConnected;
     //</editor-fold>
 
