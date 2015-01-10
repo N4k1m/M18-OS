@@ -8,6 +8,7 @@ import SPF.Authentication.SymmetricKey;
 import SPF.Cle;
 import SPF.Crypto.Chiffrement;
 import SPF.Integrity.Integrity;
+import Threads.ThreadUrgence;
 import Utils.BytesConverter;
 import Utils.MessageBoxes;
 import Utils.PropertyLoader;
@@ -48,6 +49,7 @@ public class MainFrame extends javax.swing.JFrame
 
         this.loadDefaultSettings();
         this.sock = null;
+        this.SocketUrgence = null;
 
         // Center frame
         this.setLocationRelativeTo(null);
@@ -149,9 +151,17 @@ public class MainFrame extends javax.swing.JFrame
         try
         {
             this.sock = new Socket(ip, port);
+            this.SocketUrgence = new Socket(ip, port + 1);
+
+            // TODO : lancer le thread urgence
+            this.threadUrgence = new ThreadUrgence(this.SocketUrgence, this);
+            this.threadUrgence.start();
 
             // Throws exception if an error occured
             this.loginProcedure();
+
+            // Connexion succeed, server isn't suspended
+            this.setServerSuspended(false);
         }
         catch (UnknownHostException ex)
         {
@@ -175,7 +185,7 @@ public class MainFrame extends javax.swing.JFrame
 
     private void disconnectFromServer()
     {
-        if (this.sock == null)
+        if (this.sock == null && this.SocketUrgence == null)
         {
             System.out.println("[FAIL] You are not connected to the server");
             return;
@@ -185,8 +195,13 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.sock.close();
             this.sock = null;
+
+            // Arrêter le thread
+            this.threadUrgence.requestStop();
+            this.threadUrgence.join();
+            this.SocketUrgence = null;
         }
-        catch (IOException ex)
+        catch (IOException | InterruptedException ex)
         {
             System.out.println("[FAIL] An error occurred disconnecting the "
                 + "system from the server : " + ex);
@@ -217,8 +232,18 @@ public class MainFrame extends javax.swing.JFrame
 
         if (this.isConnected)
         {
-            this.labelStatus.setForeground(Color.GREEN);
-            this.labelStatus.setText("Connected");
+            if (this.isServerSuspended())
+            {
+                this.labelStatus.setForeground(Color.ORANGE);
+                this.labelStatus.setText("Connected - Server suspended");
+                this.buttonGetDocument.setEnabled(false);
+            }
+            else
+            {
+                this.labelStatus.setForeground(Color.GREEN);
+                this.labelStatus.setText("Connected");
+            }
+
             this.buttonConnect.setText("Disconnect");
         }
         else
@@ -308,6 +333,24 @@ public class MainFrame extends javax.swing.JFrame
     }
     //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="Public methods">
+    public synchronized void setServerSuspended(boolean suspended)
+    {
+        this.serverSuspended = suspended;
+        this.showStatus();
+    }
+
+    public synchronized boolean isServerSuspended()
+    {
+        return this.serverSuspended;
+    }
+
+    public synchronized void showMessage(String title, String content)
+    {
+        MessageBoxes.ShowMessage(content, title);
+    }
+    //</editor-fold>
+
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents()
     {
@@ -353,7 +396,7 @@ public class MainFrame extends javax.swing.JFrame
 
         panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
         java.awt.GridBagLayout panelHeaderLayout = new java.awt.GridBagLayout();
-        panelHeaderLayout.columnWidths = new int[] {0, 5, 0, 5, 0, 5, 0, 5, 0, 5, 0};
+        panelHeaderLayout.columnWidths = new int[] {0, 5, 0, 5, 0, 5, 0, 5, 0};
         panelHeaderLayout.rowHeights = new int[] {0, 3, 0, 3, 0};
         panelHeader.setLayout(panelHeaderLayout);
 
@@ -611,6 +654,10 @@ public class MainFrame extends javax.swing.JFrame
             if (this.sock == null || !this.sock.isConnected())
                 throw new Exception("You are disconnected from server");
 
+            // Check if server is running
+            if (this.isServerSuspended())
+                throw new Exception("Server is suspended");
+
             if (this.textFieldDocumentName.getText().isEmpty())
                 throw new Exception("Document name is missing");
 
@@ -774,6 +821,11 @@ public class MainFrame extends javax.swing.JFrame
     // <editor-fold defaultstate="collapsed" desc="Private variables">
     private Socket sock;
     private boolean isConnected;
+
+    private boolean serverSuspended;
+
+    private Socket SocketUrgence;
+    private ThreadUrgence threadUrgence;
 
     // Models
     private DefaultComboBoxModel<String> chiffrementProvidersModel;

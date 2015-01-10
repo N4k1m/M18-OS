@@ -1,5 +1,6 @@
 package GUI;
 
+import Multithreading.ThreadAdmin;
 import GMC.EventTracker;
 import Multithreading.ThreadServer;
 import MyLittleCheapLibrary.CIAManager;
@@ -42,6 +43,7 @@ public class MainFrame extends javax.swing.JFrame
 
         this.loadDefaultSettings();
         this.threadServer = null;
+        this.threadAdmin  = null;
 
         this.showStatus();
     }
@@ -90,9 +92,15 @@ public class MainFrame extends javax.swing.JFrame
 
             Properties prop = PropertyLoader.load(path);
 
-            // Set the default port server
+            // Set the default port server for clients
             this.spinnerPort.setValue(
-                new Integer(prop.getProperty("port_server", DEFAULT_PORT)));
+                new Integer(prop.getProperty("clients_port_server",
+                                             DEFAULT_CLIENTS_PORT)));
+
+            // Set the default port server for administrators
+            this.spinnerPortAdmin.setValue(
+                new Integer(prop.getProperty("admin_port_server",
+                                             DEFAULT_ADMIN_PORT)));
 
             // Set default threads client count
             this.spinnerThreadsCount.setValue(
@@ -114,29 +122,44 @@ public class MainFrame extends javax.swing.JFrame
 
     private void startServer()
     {
-        if (this.threadServer != null)
+        if (this.threadServer != null || this.threadAdmin != null)
             this.stopServer();
 
-        // Start thread
+        // Start thread clients
         int port = (int)this.spinnerPort.getValue();
         int threadsCount = (int)this.spinnerThreadsCount.getValue();
         int maxQueuedTasks = (int)this.spinnerMaxQueuedTasks.getValue();
         this.threadServer = new ThreadServer(port, threadsCount, maxQueuedTasks, this);
         this.threadServer.start();
+
+        // Start thread admin
+        port = (int)this.spinnerPortAdmin.getValue();
+        this.threadAdmin = new ThreadAdmin(port, this);
+        this.threadAdmin.start();
+
         this.showStatus();
     }
 
     private void stopServer()
     {
-        if (this.threadServer == null)
-            return;
-
         try
         {
-            // Stop thread
-            this.threadServer.requestStop();
-            this.threadServer.join();
-            this.threadServer = null;
+            // Stop thread clients
+            if (this.threadServer != null)
+            {
+                this.threadServer.requestStop();
+                this.threadServer.join();
+                this.threadServer = null;
+            }
+
+            // Stop thread admin
+            if (this.threadAdmin != null)
+            {
+                this.threadAdmin.requestStop();
+                this.threadAdmin.join();
+                this.threadAdmin = null;
+            }
+
         }
         catch (IOException | InterruptedException ex)
         {
@@ -150,17 +173,28 @@ public class MainFrame extends javax.swing.JFrame
 
     private void showStatus()
     {
-        this.isRunning = this.threadServer != null &&
-                         this.threadServer.isAlive();
+        this.isRunning = this.threadServer != null   &&
+                         this.threadServer.isAlive() &&
+                         this.threadAdmin != null    &&
+                         this.threadAdmin.isAlive();
 
         this.spinnerPort.setEnabled(!this.isRunning);
+        this.spinnerPortAdmin.setEnabled(!this.isRunning);
         this.spinnerThreadsCount.setEnabled(!this.isRunning);
         this.spinnerMaxQueuedTasks.setEnabled(!this.isRunning);
 
         if (this.isRunning)
         {
-            this.labelStatus.setForeground(Color.GREEN);
-            this.labelStatus.setText("Server is running");
+            if (this.isServerSuspended())
+            {
+                this.labelStatus.setForeground(Color.ORANGE);
+                this.labelStatus.setText("Server suspended");
+            }
+            else
+            {
+                this.labelStatus.setForeground(Color.GREEN);
+                this.labelStatus.setText("Server is running");
+            }
             this.buttonStartStop.setText("Stop");
         }
         else
@@ -283,6 +317,19 @@ public class MainFrame extends javax.swing.JFrame
     }
     //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="Public methods">
+    public synchronized void setServerSuspended(boolean suspended)
+    {
+        this.serverSuspended = suspended;
+        this.showStatus();
+    }
+
+    public synchronized boolean isServerSuspended()
+    {
+        return this.serverSuspended;
+    }
+    //</editor-fold>
+
     //<editor-fold defaultstate="collapsed" desc="Overrided methods">
     @Override
     public void manageEvent(String event)
@@ -301,6 +348,8 @@ public class MainFrame extends javax.swing.JFrame
         panelHeaderBody = new javax.swing.JPanel();
         labelStatusTitle = new javax.swing.JLabel();
         labelStatus = new javax.swing.JLabel();
+        labelPortAdmin = new javax.swing.JLabel();
+        spinnerPortAdmin = new javax.swing.JSpinner();
         labelPort = new javax.swing.JLabel();
         spinnerPort = new javax.swing.JSpinner();
         labelThreadsPool = new javax.swing.JLabel();
@@ -333,7 +382,7 @@ public class MainFrame extends javax.swing.JFrame
         panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panelHeader.setLayout(new java.awt.BorderLayout(10, 0));
 
-        buttonStartStop.setText("Start");
+        buttonStartStop.setText("<state>");
         buttonStartStop.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -343,7 +392,7 @@ public class MainFrame extends javax.swing.JFrame
         });
         panelHeader.add(buttonStartStop, java.awt.BorderLayout.LINE_END);
 
-        panelHeaderBody.setLayout(new java.awt.GridLayout(4, 2));
+        panelHeaderBody.setLayout(new java.awt.GridLayout(5, 2));
 
         labelStatusTitle.setText("Status :");
         panelHeaderBody.add(labelStatusTitle);
@@ -351,10 +400,16 @@ public class MainFrame extends javax.swing.JFrame
         labelStatus.setText("<status>");
         panelHeaderBody.add(labelStatus);
 
-        labelPort.setText("Listening port :");
+        labelPortAdmin.setText("Admin listening port :");
+        panelHeaderBody.add(labelPortAdmin);
+
+        spinnerPortAdmin.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(1), Integer.valueOf(1), null, Integer.valueOf(1)));
+        panelHeaderBody.add(spinnerPortAdmin);
+
+        labelPort.setText("Clients listening port :");
         panelHeaderBody.add(labelPort);
 
-        spinnerPort.setModel(new javax.swing.SpinnerNumberModel());
+        spinnerPort.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(1), Integer.valueOf(1), null, Integer.valueOf(1)));
         panelHeaderBody.add(spinnerPort);
 
         labelThreadsPool.setText("Thread(s) pool :");
@@ -605,6 +660,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JLabel labelCipherKeyLength;
     private javax.swing.JLabel labelCipherProvider;
     private javax.swing.JLabel labelPort;
+    private javax.swing.JLabel labelPortAdmin;
     private javax.swing.JLabel labelSecretMessage;
     private javax.swing.JLabel labelStatus;
     private javax.swing.JLabel labelStatusTitle;
@@ -617,6 +673,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JSpinner spinnerCipherKeyLength;
     private javax.swing.JSpinner spinnerMaxQueuedTasks;
     private javax.swing.JSpinner spinnerPort;
+    private javax.swing.JSpinner spinnerPortAdmin;
     private javax.swing.JSpinner spinnerThreadsCount;
     private javax.swing.JSplitPane splitPane;
     private javax.swing.JTabbedPane tabbedPane;
@@ -627,7 +684,9 @@ public class MainFrame extends javax.swing.JFrame
 
     // <editor-fold defaultstate="collapsed" desc="Private variables">
     private boolean isRunning;
+    private boolean serverSuspended;
     private ThreadServer threadServer;
+    private ThreadAdmin threadAdmin;
 
     // Models
     private SpinnerNumberModel defaultSpinnerModel;
@@ -646,13 +705,15 @@ public class MainFrame extends javax.swing.JFrame
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Static variable">
-    private static final String DEFAULT_PORT;
+    private static final String DEFAULT_CLIENTS_PORT;
+    private static final String DEFAULT_ADMIN_PORT;
     private static final String DEFAULT_THREADS_COUNT;
     private static final String DEFAULT_MAX_QUEUED_TASKS;
 
     static
     {
-        DEFAULT_PORT = "40000";
+        DEFAULT_CLIENTS_PORT = "40000";
+        DEFAULT_ADMIN_PORT = "50000";
         DEFAULT_THREADS_COUNT = "3";
         DEFAULT_MAX_QUEUED_TASKS = "3";
     }
