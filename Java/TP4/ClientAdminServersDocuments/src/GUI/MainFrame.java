@@ -1,17 +1,18 @@
 package GUI;
 
-import DOCSAP.DOCSAProtocol;
+import DOCSAP.DOCSAPRequest;
 import Utils.MessageBoxes;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.awt.Component;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Properties;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -30,8 +31,6 @@ public class MainFrame extends javax.swing.JFrame
 
         this.loadDefaultSettings();
         this.sock = null;
-        this.dis  = null;
-        this.dos  = null;
 
         this.showStatus();
     }
@@ -117,10 +116,13 @@ public class MainFrame extends javax.swing.JFrame
         try
         {
             this.sock = new Socket(ip, port);
-            this.dis = new DataInputStream(this.sock.getInputStream());
-            this.dos = new DataOutputStream(this.sock.getOutputStream());
 
             // TODO : login procedure
+            DOCSAPRequest request = new DOCSAPRequest(DOCSAPRequest.LOGINA);
+            request.addArg("xavier");
+            request.addArg("m910719X");
+
+            request.send(this.sock);
         }
         catch (UnknownHostException ex)
         {
@@ -153,22 +155,10 @@ public class MainFrame extends javax.swing.JFrame
         try
         {
             // Send QUIT request
-            this.sendMessage(DOCSAProtocol.getQUITTrame());
+            DOCSAPRequest.quickSend(DOCSAPRequest.QUIT, this.sock);
 
             this.sock.close();
             this.sock = null;
-
-            if (this.dis != null)
-            {
-                this.dis.close();
-                this.dis = null;
-            }
-
-            if (this.dos != null)
-            {
-                this.dos.close();
-                this.dos = null;
-            }
         }
         catch (Exception ex)
         {
@@ -179,50 +169,6 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.showStatus();
         }
-    }
-
-    private void sendMessage(String message) throws Exception
-    {
-        try
-        {
-            if (this.sock == null)
-                throw new Exception("You must be logged in");
-
-            this.dos.write(message.getBytes());
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("Sending error : " + ex.getMessage());
-        }
-    }
-
-    private String[] receiveSplitMessage() throws Exception
-    {
-        String[] tokens = null;
-
-        byte b;
-        char end = DOCSAProtocol.end_trame.charAt(0);
-
-        StringBuilder buffer = new StringBuilder();
-
-        try
-        {
-            // Receive loop
-            while ((b = this.dis.readByte()) != (byte)end)
-                buffer.append((char)b);
-
-            String reply = buffer.toString();
-            System.out.println("[ OK ] Reply : " + reply);
-            tokens = reply.split("\\" + DOCSAProtocol.sep_trame
-                + "|\\" + DOCSAProtocol.end_trame);
-            System.out.println("Tokens count = " + tokens.length);
-        }
-        catch (IOException ex)
-        {
-            throw new Exception("Receiving error : " + ex.getMessage());
-        }
-
-        return tokens;
     }
     //</editor-fold>
 
@@ -381,6 +327,13 @@ public class MainFrame extends javax.swing.JFrame
         panelBodyLeft.setLayout(panelBodyLeftLayout);
 
         buttonListClients.setText("List clients");
+        buttonListClients.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonListClientsActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
@@ -388,6 +341,13 @@ public class MainFrame extends javax.swing.JFrame
         panelBodyLeft.add(buttonListClients, gridBagConstraints);
 
         buttonPause.setText("Pause");
+        buttonPause.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonPauseActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 2;
@@ -395,6 +355,13 @@ public class MainFrame extends javax.swing.JFrame
         panelBodyLeft.add(buttonPause, gridBagConstraints);
 
         buttonResume.setText("Resume");
+        buttonResume.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonResumeActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 4;
@@ -402,6 +369,13 @@ public class MainFrame extends javax.swing.JFrame
         panelBodyLeft.add(buttonResume, gridBagConstraints);
 
         buttonStop.setText("Stop");
+        buttonStop.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonStopActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 6;
@@ -417,17 +391,17 @@ public class MainFrame extends javax.swing.JFrame
             },
             new String []
             {
-                "Host", "IPv4 address"
+                "IPv4 address"
             }
         )
         {
             Class[] types = new Class []
             {
-                java.lang.String.class, java.lang.String.class
+                java.lang.String.class
             };
             boolean[] canEdit = new boolean []
             {
-                false, false
+                false
             };
 
             public Class getColumnClass(int columnIndex)
@@ -474,6 +448,168 @@ public class MainFrame extends javax.swing.JFrame
     {//GEN-HEADEREND:event_buttonClearActionPerformed
         this.textAreaOutput.setText(null);
     }//GEN-LAST:event_buttonClearActionPerformed
+
+    private void buttonListClientsActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonListClientsActionPerformed
+    {//GEN-HEADEREND:event_buttonListClientsActionPerformed
+        try
+        {
+            if (!this.isConnected)
+                throw new Exception("you must be logged in");
+
+            DOCSAPRequest query = new DOCSAPRequest(DOCSAPRequest.LCLIENTS);
+            DOCSAPRequest reply = query.sendAndRecv(this.sock);
+
+            // If server closed the connection
+            if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+                throw new Exception("Disconnected from server");
+
+            // If LCLIENTS failed
+            if (reply.is(DOCSAPRequest.FAIL))
+                throw new Exception(reply.getArg(0)); // arg 0 = cause
+
+            // Invalid reply
+            if (!reply.is(DOCSAPRequest.ACK))
+                throw new Exception("Invalid reply");
+
+            // Remove all previous clients from table
+            DefaultTableModel IPTableModel = (DefaultTableModel)this.table.getModel();
+            IPTableModel.getDataVector().removeAllElements();
+
+            // If there is no client connected
+            if (reply.getArgsCount() <= 0)
+                throw new Exception("No client connected");
+
+            System.out.println("[ OK ] " + reply.getArgsCount() + " clients connected");
+
+            // Add each client IPv4 address in table
+            for(int i = 0; i < reply.getArgsCount(); ++i)
+            {
+                ArrayList<String> rowClient = new ArrayList<>();
+                rowClient.add("Client " + i);
+                rowClient.add(reply.getArg(i));
+                IPTableModel.addRow(rowClient.toArray());
+            }
+        }
+        catch (Exception ex)
+        {
+            System.out.println("[FAIL] Unable to list clients : " + ex.getMessage());
+            MessageBoxes.ShowError(ex.getMessage(), "Unable to list clients");
+        }
+    }//GEN-LAST:event_buttonListClientsActionPerformed
+
+    private void buttonPauseActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonPauseActionPerformed
+    {//GEN-HEADEREND:event_buttonPauseActionPerformed
+        try
+        {
+            if (!this.isConnected)
+                throw new Exception("you must be logged in");
+
+            DOCSAPRequest query = new DOCSAPRequest(DOCSAPRequest.PAUSE);
+            DOCSAPRequest reply = query.sendAndRecv(this.sock);
+
+            // If server closed the connection
+            if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+                throw new Exception("Disconnected from server");
+
+            // If PAUSE failed
+            if (reply.is(DOCSAPRequest.FAIL))
+                throw new Exception(reply.getArg(0)); // arg 0 = cause
+
+            // Invalid reply
+            if (!reply.is(DOCSAPRequest.ACK))
+                throw new Exception("Invalid reply");
+
+            System.out.println("[ OK ] Server suspended");
+            MessageBoxes.ShowInfo("Server suspended", "Server suspended");
+        }
+        catch (Exception ex)
+        {
+            System.out.println("[FAIL] Unable to suspend server : " + ex.getMessage());
+            MessageBoxes.ShowError(ex.getMessage(), "Unable to suspend server");
+        }
+    }//GEN-LAST:event_buttonPauseActionPerformed
+
+    private void buttonResumeActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonResumeActionPerformed
+    {//GEN-HEADEREND:event_buttonResumeActionPerformed
+        try
+        {
+            if (!this.isConnected)
+                throw new Exception("you must be logged in");
+
+            DOCSAPRequest query = new DOCSAPRequest(DOCSAPRequest.RESUME);
+            DOCSAPRequest reply = query.sendAndRecv(this.sock);
+
+            // If server closed the connection
+            if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+                throw new Exception("Disconnected from server");
+
+            // If RESUME failed
+            if (reply.is(DOCSAPRequest.FAIL))
+                throw new Exception(reply.getArg(0)); // arg 0 = cause
+
+            // Invalid reply
+            if (!reply.is(DOCSAPRequest.ACK))
+                throw new Exception("Invalid reply");
+
+            System.out.println("[ OK ] Server resumed");
+            MessageBoxes.ShowInfo("Server resumed", "Server resumed");
+        }
+        catch (Exception ex)
+        {
+            System.out.println("[FAIL] Unable to resume server : " + ex.getMessage());
+            MessageBoxes.ShowError(ex.getMessage(), "Unable to resume server");
+        }
+    }//GEN-LAST:event_buttonResumeActionPerformed
+
+    private void buttonStopActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonStopActionPerformed
+    {//GEN-HEADEREND:event_buttonStopActionPerformed
+        try
+        {
+            String delay;
+
+            PanelNumberOfSeconds pnos = new PanelNumberOfSeconds();
+            int option = JOptionPane.showOptionDialog(
+                null, pnos, "Number of second(s) before shutdown",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
+                null, null, null);
+
+            if (option == JOptionPane.CANCEL_OPTION)
+            {
+                System.out.println("[FAIL] Stop action aborted");
+                return;
+            }
+
+            if (option != JOptionPane.OK_OPTION)
+                throw new Exception("Invalid action");
+
+            delay = String.valueOf(pnos.getDelay());
+
+            DOCSAPRequest query = new DOCSAPRequest(DOCSAPRequest.STOP);
+            query.addArg(delay);
+
+            DOCSAPRequest reply = query.sendAndRecv(this.sock);
+
+            // If server closed the connection
+            if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+                throw new Exception("Disconnected from server");
+
+            // If STOP failed
+            if (reply.is(DOCSAPRequest.FAIL))
+                throw new Exception(reply.getArg(0)); // arg 0 = cause
+
+            // Invalid reply
+            if (!reply.is(DOCSAPRequest.ACK))
+                throw new Exception("Invalid reply");
+
+            System.out.println("[ OK ] Server will stop in " + delay + " seconds");
+            MessageBoxes.ShowInfo("Server will stop in " + delay + " seconds", "Server will stop");
+        }
+        catch (Exception ex)
+        {
+            System.out.println("[FAIL] Unable to stop server : " + ex.getMessage());
+            MessageBoxes.ShowError(ex.getMessage(), "Unable to stop server");
+        }
+    }//GEN-LAST:event_buttonStopActionPerformed
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Widgets">
@@ -507,8 +643,6 @@ public class MainFrame extends javax.swing.JFrame
 
     //<editor-fold defaultstate="collapsed" desc="Private variables">
     private Socket sock;
-    private DataInputStream  dis;
-    private DataOutputStream dos;
     private boolean isConnected;
     //</editor-fold>
 
@@ -520,7 +654,7 @@ public class MainFrame extends javax.swing.JFrame
     static
     {
         DEFAULT_IP   = "127.0.0.1";
-        DEFAULT_PORT = "40000";
+        DEFAULT_PORT = "50000";
         keysFolderPath = "KEYS" + System.getProperty("file.separator");
     }
     //</editor-fold>
