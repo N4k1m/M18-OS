@@ -38,11 +38,17 @@ public class ThreadServer extends Thread
                         int limitQueue,
                         EventTracker parent)
     {
+        // client management
         this.port = port;
         this.socketServer = null;
         this.socketClient = null;
         this.isStopped = true;
         this.parent = parent;
+
+        // Urgence management
+        this.socketServerUrgence = null;
+        this.socketClientUrgence = null;
+        this.threadUrgence = new ThreadUrgence();
 
         this.keyGen = null;
         this.authentication = null;
@@ -63,8 +69,10 @@ public class ThreadServer extends Thread
     {
         try
         {
-            this.socketServer = new ServerSocket(this.port);
-            System.out.println("[ OK ] Server started on port " + this.port);
+            this.socketServer  = new ServerSocket(this.port);
+            this.socketServerUrgence = new ServerSocket(this.port + 1);
+            System.out.println("[ OK ] Server started on port " + this.port +
+                " and urgence on port : " + this.port + 1);
         }
         catch (IOException ex)
         {
@@ -76,6 +84,9 @@ public class ThreadServer extends Thread
         this.pool.start();
         this.isStopped = false;
 
+        // Start thread urgence
+        this.threadUrgence.start();
+
         // Main loop
         while(!this.isStopped())
         {
@@ -83,6 +94,7 @@ public class ThreadServer extends Thread
             {
                 parent.manageEvent("[ OK ] Waiting client");
                 this.socketClient = this.socketServer.accept();
+                this.socketClientUrgence = this.socketServerUrgence.accept();
                 parent.manageEvent("[ OK ] New client connected");
             }
             catch (IOException ex)
@@ -91,6 +103,8 @@ public class ThreadServer extends Thread
                     + " Stop waiting client");
                 continue;
             }
+
+            // TODO vérifier que l'in peut accepter des clients (serveur en pause)
 
             // Get LOGIN request from protocol SGDOCP
             try
@@ -190,7 +204,9 @@ public class ThreadServer extends Thread
 
         try
         {
+            // Close the two client sockets
             this.socketClient.close();
+            this.socketClientUrgence.close();
         }
         catch (IOException ex)
         {
@@ -261,30 +277,50 @@ public class ThreadServer extends Thread
             // Add Runnable to task queue
             this.pool.execute(this.query.createRunnable(
                 this.socketClient, this.parent));
+
+            // Transfert socket urgent to thread urgence
+            this.threadUrgence.addClientUrgentSocket(this.socketClientUrgence);
         }
         catch (Exception ex)
         {
             parent.manageEvent("[FAIL] Thread server : " + ex.getMessage());
             this.sendFailReply(ex.getMessage());
         }
+        finally
+        {
+            this.socketClient = null;
+            this.socketClientUrgence = null;
+        }
     }
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Public methods">
-    public synchronized void requestStop() throws IOException
+    public synchronized void requestStop() throws IOException, InterruptedException
     {
         this.isStopped = true;
 
         // Stop threads client in pool
         this.pool.requestStop();
 
+        // Stop thread urgence
+        this.threadUrgence.requestStop();
+        this.threadUrgence.join();
+
         // Close socket client
         if (this.socketClient != null && this.socketClient.isConnected())
             this.socketClient.close();
 
+        // Close client socket urgence
+        if (this.socketClientUrgence != null && this.socketClientUrgence.isConnected())
+            this.socketClientUrgence.close();
+
         // Close socket server
         if (this.socketServer != null)
             this.socketServer.close();
+
+        // Close server socket urgence
+        if (this.socketServerUrgence != null)
+            this.socketServerUrgence.close();
     }
 
     public synchronized boolean isStopped()
@@ -298,10 +334,15 @@ public class ThreadServer extends Thread
     private final int port;
     private ServerSocket socketServer;
     private Socket socketClient;
+
+    private ServerSocket socketServerUrgence;
+    private Socket socketClientUrgence;
+
     private boolean isStopped;
 
     // Multithreading
     private ThreadPool pool;
+    private ThreadUrgence threadUrgence;
     private LimitedBlockingTaskQueue limitedBlockingTaskQueue;
 
     // Protocol

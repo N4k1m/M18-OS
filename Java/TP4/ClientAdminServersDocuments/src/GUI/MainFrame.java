@@ -121,8 +121,9 @@ public class MainFrame extends javax.swing.JFrame
             DOCSAPRequest request = new DOCSAPRequest(DOCSAPRequest.LOGINA);
             request.addArg("xavier");
             request.addArg("m910719X");
+            DOCSAPRequest reply = request.sendAndRecv(this.sock);
 
-            request.send(this.sock);
+            // TODO gérer la réponse
         }
         catch (UnknownHostException ex)
         {

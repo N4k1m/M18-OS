@@ -1,6 +1,7 @@
-package Admin;
+package Multithreading;
 
 import DOCSAP.DOCSAPRequest;
+import GUI.MainFrame;
 import Utils.ReturnValue;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -13,7 +14,7 @@ import java.net.Socket;
 public class ThreadAdmin extends Thread
 {
     //<editor-fold defaultstate="collapsed" desc="Constructor">
-    public ThreadAdmin(int port)
+    public ThreadAdmin(int port, MainFrame parent)
     {
         this.port = port;
         this.socketServer = null;
@@ -21,6 +22,8 @@ public class ThreadAdmin extends Thread
 
         this.isStopped = true;
         this.clientStop = true;
+
+        this.parent = parent;
     }
     //</editor-fold>
 
@@ -61,6 +64,7 @@ public class ThreadAdmin extends Thread
             // Client loop
             while(!this.clientStop)
             {
+                System.out.println("[ADMI] Waiting instruction");
                 this.query = DOCSAPRequest.recv(this.socketClient);
                 System.out.println("[ADMI] Query received : "
                     + this.query.getCommand());
@@ -75,6 +79,17 @@ public class ThreadAdmin extends Thread
                     case DOCSAPRequest.QUIT:
                         this.clientStop = true;
                         System.out.println("[ADMI] Administrator quit");
+                        DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
+                        break;
+                    case DOCSAPRequest.PAUSE:
+                        this.parent.setServerSuspended(true);
+                        // TODO Communication avec Thread urgence
+                        DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
+                        break;
+                    case DOCSAPRequest.RESUME:
+                        this.parent.setServerSuspended(false);
+                        // TODO communication avec thread urgence
+                        DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
                         break;
                     default:
                         System.out.println("[ADMI] command : " + this.query.getCommand());
@@ -119,5 +134,7 @@ public class ThreadAdmin extends Thread
     private boolean clientStop;
 
     private DOCSAPRequest query;
+
+    private MainFrame parent;
     //</editor-fold>
 }
