@@ -38,6 +38,7 @@ public class ThreadUrgence extends Thread
                 case Request.SOCK_ERROR:
                 case Request.NO_COMMAND:
                     System.out.println("[URG] Disconnected from server");
+                    this.isStopped = true;
                     break;
                 case "PAUSE":
                     this.parent.setServerSuspended(true);
@@ -51,6 +52,8 @@ public class ThreadUrgence extends Thread
                                             "Server will be down in "    +
                                             this.request.getStringArg(0) +
                                             " second(s)");
+                    break;
+                default:
                     break;
             }
         }

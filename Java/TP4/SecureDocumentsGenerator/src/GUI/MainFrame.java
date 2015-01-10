@@ -17,6 +17,8 @@ import java.awt.event.ItemEvent;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.util.Properties;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JFileChooser;
@@ -125,19 +127,38 @@ public class MainFrame extends javax.swing.JFrame
         if (this.threadServer != null || this.threadAdmin != null)
             this.stopServer();
 
-        // Start thread clients
-        int port = (int)this.spinnerPort.getValue();
-        int threadsCount = (int)this.spinnerThreadsCount.getValue();
-        int maxQueuedTasks = (int)this.spinnerMaxQueuedTasks.getValue();
-        this.threadServer = new ThreadServer(port, threadsCount, maxQueuedTasks, this);
-        this.threadServer.start();
+        try
+        {
+            this.posAdminToUrgence = new PipedOutputStream();
+            this.pisAdminToUrgence = new PipedInputStream(posAdminToUrgence);
 
-        // Start thread admin
-        port = (int)this.spinnerPortAdmin.getValue();
-        this.threadAdmin = new ThreadAdmin(port, this);
-        this.threadAdmin.start();
+            this.posUrgenceToAdmin = new PipedOutputStream();
+            this.pisUrgenceToAdmin = new PipedInputStream(posUrgenceToAdmin);
 
-        this.showStatus();
+            // Start thread clients
+            int port = (int)this.spinnerPort.getValue();
+            int threadsCount = (int)this.spinnerThreadsCount.getValue();
+            int maxQueuedTasks = (int)this.spinnerMaxQueuedTasks.getValue();
+            this.threadServer = new ThreadServer(
+                port, threadsCount, maxQueuedTasks, this.posUrgenceToAdmin,
+                this.pisAdminToUrgence, this);
+            this.threadServer.start();
+
+            // Start thread admin
+            port = (int)this.spinnerPortAdmin.getValue();
+            this.threadAdmin = new ThreadAdmin(
+                port,this.posAdminToUrgence, this.pisUrgenceToAdmin, this);
+            this.threadAdmin.start();
+        }
+        catch (Exception e)
+        {
+            System.out.println("[FAIL] Unable to start server : " + e.getMessage());
+            this.stopServer();
+        }
+        finally
+        {
+            this.showStatus();
+        }
     }
 
     private void stopServer()
@@ -687,6 +708,12 @@ public class MainFrame extends javax.swing.JFrame
     private boolean serverSuspended;
     private ThreadServer threadServer;
     private ThreadAdmin threadAdmin;
+
+    // Thread communication
+    private PipedOutputStream posAdminToUrgence;
+    private PipedInputStream  pisAdminToUrgence;
+    private PipedOutputStream posUrgenceToAdmin;
+    private PipedInputStream  pisUrgenceToAdmin;
 
     // Models
     private SpinnerNumberModel defaultSpinnerModel;

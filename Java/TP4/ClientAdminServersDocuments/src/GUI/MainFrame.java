@@ -462,7 +462,10 @@ public class MainFrame extends javax.swing.JFrame
 
             // If server closed the connection
             if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+            {
+                this.disconnectFromServer();
                 throw new Exception("Disconnected from server");
+            }
 
             // If LCLIENTS failed
             if (reply.is(DOCSAPRequest.FAIL))
@@ -486,7 +489,6 @@ public class MainFrame extends javax.swing.JFrame
             for(int i = 0; i < reply.getArgsCount(); ++i)
             {
                 ArrayList<String> rowClient = new ArrayList<>();
-                rowClient.add("Client " + i);
                 rowClient.add(reply.getArg(i));
                 IPTableModel.addRow(rowClient.toArray());
             }

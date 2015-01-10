@@ -11,6 +11,8 @@ import SPF.Authentication.SymmetricKey;
 import Utils.PropertyLoader;
 import Utils.ReturnValue;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.AlgorithmParameterGenerator;
@@ -37,6 +39,8 @@ public class ThreadServer extends Thread
     public ThreadServer(int port,
                         int threadsClientCount,
                         int limitQueue,
+                        OutputStream out,
+                        InputStream in,
                         MainFrame parent)
     {
         // client management
@@ -49,7 +53,7 @@ public class ThreadServer extends Thread
         // Urgence management
         this.socketServerUrgence = null;
         this.socketClientUrgence = null;
-        this.threadUrgence = new ThreadUrgence();
+        this.threadUrgence = new ThreadUrgence(out, in);
 
         this.keyGen = null;
         this.authentication = null;
