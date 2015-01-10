@@ -1,7 +1,8 @@
 package Multithreading;
 
-import GMC.ThreadPool;
 import GMC.EventTracker;
+import GMC.ThreadPool;
+import GUI.MainFrame;
 import MyLittleCheapLibrary.CIAManager;
 import SGDOCP.SGDOCPCommand;
 import SGDOCP.SGDOCPRequest;
@@ -36,7 +37,7 @@ public class ThreadServer extends Thread
     public ThreadServer(int port,
                         int threadsClientCount,
                         int limitQueue,
-                        EventTracker parent)
+                        MainFrame parent)
     {
         // client management
         this.port = port;
@@ -104,7 +105,13 @@ public class ThreadServer extends Thread
                 continue;
             }
 
-            // TODO vérifier que l'in peut accepter des clients (serveur en pause)
+            // Check if the server is suspended
+            if (this.parent.isServerSuspended())
+            {
+                System.out.println("[FAIL] Client rejected. Server is suspended");
+                this.sendFailReply("Server suspended");
+                continue;
+            }
 
             // Get LOGIN request from protocol SGDOCP
             try
@@ -276,7 +283,7 @@ public class ThreadServer extends Thread
 
             // Add Runnable to task queue
             this.pool.execute(this.query.createRunnable(
-                this.socketClient, this.parent));
+                this.socketClient, (EventTracker)this.parent));
 
             // Transfert socket urgent to thread urgence
             this.threadUrgence.addClientUrgentSocket(this.socketClientUrgence);
@@ -354,7 +361,7 @@ public class ThreadServer extends Thread
     private Authentication authentication;
 
     // GUI
-    private EventTracker parent;
+    private MainFrame parent;
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Static variables">

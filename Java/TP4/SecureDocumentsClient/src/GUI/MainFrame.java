@@ -153,15 +153,15 @@ public class MainFrame extends javax.swing.JFrame
             this.sock = new Socket(ip, port);
             this.SocketUrgence = new Socket(ip, port + 1);
 
-            // TODO : lancer le thread urgence
-            this.threadUrgence = new ThreadUrgence(this.SocketUrgence, this);
-            this.threadUrgence.start();
-
             // Throws exception if an error occured
             this.loginProcedure();
 
             // Connexion succeed, server isn't suspended
             this.setServerSuspended(false);
+
+            // TODO : lancer le thread urgence
+            this.threadUrgence = new ThreadUrgence(this.SocketUrgence, this);
+            this.threadUrgence.start();
         }
         catch (UnknownHostException ex)
         {
@@ -173,9 +173,9 @@ public class MainFrame extends javax.swing.JFrame
         }
         catch (Exception e)
         {
+            this.disconnectFromServer();
             System.out.println("[FAIL] Login failed : " + e.getMessage());
             MessageBoxes.ShowError(e.getMessage(), "Login failed");
-            this.disconnectFromServer();
         }
         finally
         {
@@ -197,8 +197,16 @@ public class MainFrame extends javax.swing.JFrame
             this.sock = null;
 
             // Arrêter le thread
-            this.threadUrgence.requestStop();
-            this.threadUrgence.join();
+            if (this.threadUrgence != null)
+            {
+                this.threadUrgence.requestStop();
+                this.threadUrgence.join();
+            }
+            else
+            {
+                this.SocketUrgence.close();
+            }
+
             this.SocketUrgence = null;
         }
         catch (IOException | InterruptedException ex)

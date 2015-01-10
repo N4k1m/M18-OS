@@ -101,10 +101,6 @@ public class ThreadAdmin extends Thread
     }
     //</editor-fold>
 
-    //<editor-fold defaultstate="collapsed" desc="Private methods">
-
-    //</editor-fold>
-
     //<editor-fold defaultstate="collapsed" desc="Public methods">
     public synchronized void requestStop() throws IOException
     {
