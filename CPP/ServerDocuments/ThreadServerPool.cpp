@@ -154,7 +154,7 @@ void ThreadServerPool::run(void)
         {
             emit message("Thread server : no thread client available");
 
-            // TODO : rejeter demande
+            // Notify the client that connection is rejected
             this->sendFAILMessage("Connection failure server full");
 
             // Free client socket

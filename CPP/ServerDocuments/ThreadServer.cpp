@@ -67,7 +67,7 @@ void ThreadServer::run(void)
         // Waiting client
         try
         {
-            emit message("Wainting client");
+            emit message("Waiting client");
             _clientSocket = _serverSocket->nextPendingConnection();
             emit message("Client connected");
         }
