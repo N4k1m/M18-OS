@@ -1,15 +1,21 @@
 package GUI;
 
 import DOCSAP.DOCSAPRequest;
+import MyLittleCheapLibrary.CIAManager;
+import SPF.Authentication.Authentication;
+import SPF.Cle;
 import Utils.MessageBoxes;
 import Utils.PropertyLoader;
 import Utils.TextAreaOutputStream;
 import java.awt.Color;
 import java.awt.Component;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Properties;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
@@ -60,6 +66,9 @@ public class MainFrame extends javax.swing.JFrame
             // Set default password
             this.passwordField.setText(prop.getProperty("password"));
 
+            this.authentificationProvider = prop.getProperty(
+                "authentification_provider", DEFAULT_AUTHENTICATION_PROVIDER);
+
             System.out.println("[ OK ] Default settings loaded");
         }
         catch (IOException ex)
@@ -102,6 +111,80 @@ public class MainFrame extends javax.swing.JFrame
         }
     }
 
+    private void getCleFromFile(String keyname)
+    {
+        try
+        {
+            final FileInputStream fis = new FileInputStream(KEYS_FOLDER_PATH + keyname + ".ser");
+            ObjectInputStream ois = new ObjectInputStream(fis);
+
+            try
+            {
+                this.cle = (Cle) ois.readObject();
+            }
+            finally
+            {
+                // on ferme les flux
+                try
+                {
+                    ois.close();
+                }
+                finally
+                {
+                    fis.close();
+                }
+            }
+        }
+        catch (IOException | ClassNotFoundException ex)
+        {
+            System.err.println(ex);
+            this.cle = null;
+        }
+    }
+
+    private void loginProcedure() throws Exception
+    {
+        String login = this.textFieldLogin.getText();
+        String password;
+
+        // Get authentification key (key name = login + ".ser")
+        this.getCleFromFile(login);
+        if (this.cle == null)
+            throw new Exception("Unable to get authentification key for " + login);
+
+        System.out.println("[ OK ] Get authentication key " + login + ".ser");
+
+        // Crate and initialise service authentication
+        this.authentication = CIAManager.getAuthentication(this.authentificationProvider);
+        this.authentication.init(this.cle);
+
+        // Hash password
+        byte[] hmac = this.authentication.makeAuthenticate(
+            new String(this.passwordField.getPassword()));
+
+        password = new String(Base64.getEncoder().encode(hmac));
+
+        System.out.println("[ OK ] Hashed password (base 64) : " + password);
+
+        // Build and send LOGIN query
+        DOCSAPRequest request = new DOCSAPRequest(DOCSAPRequest.LOGINA);
+        request.addArg(login);
+        request.addArg(password);
+        DOCSAPRequest reply = request.sendAndRecv(this.sock);
+
+        // If server closed the connection
+        if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+            throw new Exception("Disconnected from server");
+
+        // If LOGINA failed
+        if (reply.is(DOCSAPRequest.FAIL))
+            throw new Exception(reply.getArg(0)); // arg 0 = cause
+
+        // Invalid reply
+        if (!reply.is(DOCSAPRequest.ACK))
+            throw new Exception("Invalid reply");
+    }
+
     private void connecteToServer()
     {
         // Disconnect from server if connected
@@ -118,24 +201,7 @@ public class MainFrame extends javax.swing.JFrame
             this.sock = new Socket(ip, port);
 
             // Login procedure
-
-            // Build and send LOGIN query
-            DOCSAPRequest request = new DOCSAPRequest(DOCSAPRequest.LOGINA);
-            request.addArg(this.textFieldLogin.getText());
-            request.addArg(new String(this.passwordField.getPassword()));
-            DOCSAPRequest reply = request.sendAndRecv(this.sock);
-
-            // If server closed the connection
-            if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
-                throw new Exception("Disconnected from server");
-
-            // If LCLIENTS failed
-            if (reply.is(DOCSAPRequest.FAIL))
-                throw new Exception(reply.getArg(0)); // arg 0 = cause
-
-            // Invalid reply
-            if (!reply.is(DOCSAPRequest.ACK))
-                throw new Exception("Invalid reply");
+            this.loginProcedure();
         }
         catch (UnknownHostException ex)
         {
@@ -217,6 +283,7 @@ public class MainFrame extends javax.swing.JFrame
         buttonClear = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Admin Servers Documents");
         setPreferredSize(new java.awt.Dimension(500, 400));
 
         panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -659,18 +726,26 @@ public class MainFrame extends javax.swing.JFrame
     //<editor-fold defaultstate="collapsed" desc="Private variables">
     private Socket sock;
     private boolean isConnected;
+
+    private Cle cle;
+    private String authentificationProvider;
+    private Authentication authentication;
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Static variables">
     private static final String DEFAULT_IP;
     private static final String DEFAULT_PORT;
-    private static final String keysFolderPath;
+
+    private static final String KEYS_FOLDER_PATH;
+    private static final String DEFAULT_AUTHENTICATION_PROVIDER;
 
     static
     {
         DEFAULT_IP   = "127.0.0.1";
         DEFAULT_PORT = "50000";
-        keysFolderPath = "KEYS" + System.getProperty("file.separator");
+
+        KEYS_FOLDER_PATH = "KEYS" + System.getProperty("file.separator");
+        DEFAULT_AUTHENTICATION_PROVIDER = "HMACSHA1MawetProvider";
     }
     //</editor-fold>
 }
