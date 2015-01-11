@@ -48,13 +48,16 @@ public class ThreadUrgence extends Thread
                         this.manageLCLIENTS();
                         break;
                     case "PAUSE":
-                        this.managePAUSE();
+                        this.sendRequestToAllClients(new Request("PAUSE"));
                         break;
                     case "RESUME":
-                        this.manageRESUME();
+                        this.sendRequestToAllClients(new Request("RESUME"));
                         break;
                     case "STOP":
                         this.manageSTOP();
+                        break;
+                    case "SHUTDOWN_NOW":
+                        this.manageSHUTDOWN_NOW();
                         break;
                     default:
                         System.out.println("[URG] Invalid instruction");
@@ -74,25 +77,7 @@ public class ThreadUrgence extends Thread
     {
         try
         {
-            Request request = new Request("KEEPALIVE");
-            // Check if clients are already connected
-            for (int i = 0; i < this.clientUrgentSockets.size(); i++)
-            {
-                Socket clientSocket= this.clientUrgentSockets.get(i);
-                boolean connected = request.send(clientSocket);
-
-                if (!connected)
-                {
-                    System.out.println("[URG] disconnected client detected");
-                    this.clientUrgentSockets.remove(i);
-                    try
-                    {
-                        clientSocket.close();
-                    }
-                    catch (IOException ex){}
-                    i--;
-                }
-            }
+            this.sendRequestToAllClients(new Request("KEEPALIVE"));
 
             // Write the number of clients
             this.out.writeInt(this.clientUrgentSockets.size());
@@ -107,84 +92,56 @@ public class ThreadUrgence extends Thread
         }
     }
 
-    private void managePAUSE()
-    {
-        Request request = new Request("PAUSE");
-
-        for (int i = 0; i < this.clientUrgentSockets.size(); i++)
-        {
-            Socket clientSocket= this.clientUrgentSockets.get(i);
-            boolean connected = request.send(clientSocket);
-
-            if (!connected)
-            {
-                System.out.println("[URG] disconnected client detected");
-                this.clientUrgentSockets.remove(i);
-                try
-                {
-                    clientSocket.close();
-                }
-                catch (IOException ex){}
-                i--;
-            }
-        }
-    }
-
-    private void manageRESUME()
-    {
-        Request request = new Request("RESUME");
-
-        for (int i = 0; i < this.clientUrgentSockets.size(); i++)
-        {
-            Socket clientSocket= this.clientUrgentSockets.get(i);
-            boolean connected = request.send(clientSocket);
-
-            if (!connected)
-            {
-                System.out.println("[URG] disconnected client detected");
-                this.clientUrgentSockets.remove(i);
-                try
-                {
-                    clientSocket.close();
-                }
-                catch (IOException ex){}
-                i--;
-            }
-        }
-    }
-
     private void manageSTOP()
     {
         try
         {
-            String delay = this.in.readUTF();
-
             Request request = new Request("STOP");
-            request.addArg(delay);
+            request.addArg(this.in.readUTF());
 
-            for (int i = 0; i < this.clientUrgentSockets.size(); i++)
-            {
-                Socket clientSocket= this.clientUrgentSockets.get(i);
-                boolean connected = request.send(clientSocket);
-
-                if (!connected)
-                {
-                    System.out.println("[URG] disconnected client detected");
-                    this.clientUrgentSockets.remove(i);
-                    try
-                    {
-                    clientSocket.close();
-                    }
-                    catch (IOException ex){}
-                    i--;
-                }
-            }
-
+            this.sendRequestToAllClients(request);
         }
         catch (IOException ex)
         {
-            System.out.println("[FAIL] Thread urgence unable to get delay "
+            System.out.println("[URG] Thread urgence unable to get delay "
                 + "before server shutdown");
+        }
+    }
+
+    private void manageSHUTDOWN_NOW()
+    {
+        try
+        {
+            this.sendRequestToAllClients(new Request("SHUTDOWN_NOW"));
+
+            this.out.writeUTF("ACK");
+        }
+         catch (IOException ex)
+        {
+            System.out.println("[URG] Unable to send ACK to thread admin : "
+                + ex.getMessage());
+        }
+    }
+
+    private void sendRequestToAllClients(Request request)
+    {
+        // Send request and check if clients are already connected
+        for (int i = 0; i < this.clientUrgentSockets.size(); i++)
+        {
+            Socket clientSocket= this.clientUrgentSockets.get(i);
+            boolean connected = request.send(clientSocket);
+
+            if (!connected)
+            {
+                System.out.println("[URG] disconnected client detected");
+                this.clientUrgentSockets.remove(i);
+                try
+                {
+                    clientSocket.close();
+                }
+                catch (IOException ex){}
+                i--;
+            }
         }
     }
     //</editor-fold>

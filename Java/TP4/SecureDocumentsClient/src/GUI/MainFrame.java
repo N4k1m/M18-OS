@@ -355,7 +355,21 @@ public class MainFrame extends javax.swing.JFrame
 
     public synchronized void showMessage(String title, String content)
     {
-        MessageBoxes.ShowMessage(this, content, title);
+        MainFrame parent = this;
+        Thread threadMessageBoxes = new Thread(() ->
+        {
+            MessageBoxes.ShowMessage(parent, content, title);
+        });
+        threadMessageBoxes.start();
+    }
+
+    public synchronized void shutdownNow()
+    {
+        Thread threadShutdown = new Thread(() ->
+        {
+            disconnectFromServer();
+        });
+        threadShutdown.start();
     }
     //</editor-fold>
 

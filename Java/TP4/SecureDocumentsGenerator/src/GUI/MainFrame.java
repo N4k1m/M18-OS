@@ -349,6 +349,15 @@ public class MainFrame extends javax.swing.JFrame
     {
         return this.serverSuspended;
     }
+
+    public synchronized void shutdownNow()
+    {
+        Thread threadShutdown = new Thread(() ->
+        {
+            stopServer();
+        });
+        threadShutdown.start();
+    }
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Overrided methods">

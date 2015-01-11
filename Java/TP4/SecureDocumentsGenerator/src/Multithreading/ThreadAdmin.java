@@ -4,6 +4,8 @@ import DB.BeanDBAccessMySQL;
 import DOCSAP.DOCSAPRequest;
 import GUI.MainFrame;
 import Utils.ReturnValue;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,12 +14,13 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.ResultSet;
+import javax.swing.Timer;
 
 /**
  *
  * @author Nakim
  */
-public class ThreadAdmin extends Thread
+public class ThreadAdmin extends Thread implements ActionListener
 {
     //<editor-fold defaultstate="collapsed" desc="Constructor">
     public ThreadAdmin(int port, OutputStream out, InputStream in, MainFrame parent)
@@ -118,6 +121,31 @@ public class ThreadAdmin extends Thread
                                                 this.socketClient);
                 }
             }
+        }
+    }
+
+    // Called to STOP th server
+    @Override
+    public void actionPerformed(ActionEvent e)
+    {
+        try
+        {
+            // Send SHUTDOWN_NOW request to thread urgence
+            this.out.writeUTF("SHUTDOWN_NOW");
+
+            // Wait ACK reply
+            if (!this.in.readUTF().equals("ACK"))
+                throw new Exception(this.in.readUTF());
+
+            // Shutdown server
+            this.parent.shutdownNow();
+        }
+        catch (Exception ex)
+        {
+            System.out.println("[FAIL] Unable to shutdown server : " +
+                ex.getMessage());
+            DOCSAPRequest.quickSend(
+                DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
         }
     }
     //</editor-fold>
@@ -252,14 +280,16 @@ public class ThreadAdmin extends Thread
             if (!this.adminConnected)
                 throw new Exception("you must be logged in");
 
+            String delay = this.query.getArg(0);
+
             // Send STOP request and delay to thread urgence
             this.out.writeUTF("STOP");
-            this.out.writeUTF(this.query.getArg(0)); // arg 0 == delay (seconds)
+            this.out.writeUTF(delay); // arg 0 == delay (seconds)
 
-            // TODO : Armer un timer qui après delay seconds enverra un signal
-            // Dans le handler faire :
-            // --> renvoyer un info à chaque client qui se déconnecteront
-            // --> fermer le serveur
+            // Create and start timer
+            this.stopTimer = new Timer(Integer.parseInt(delay) * 1000, this);
+            this.stopTimer.setRepeats(false);
+            this.stopTimer.start();
 
             // Send ACK to admin client
             DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
@@ -312,6 +342,7 @@ public class ThreadAdmin extends Thread
     private boolean adminConnected;
 
     private DOCSAPRequest query;
+    private Timer stopTimer;
 
     private MainFrame parent;
 

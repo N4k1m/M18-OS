@@ -52,6 +52,10 @@ public class ThreadUrgence extends Thread
                                             this.request.getStringArg(0) +
                                             " second(s)");
                     break;
+                case "SHUTDOWN_NOW":
+                    this.parent.showMessage("Server shutdown", "Server shutdown now");
+                    this.parent.shutdownNow();
+                    break;
                 default:
                     break;
             }
