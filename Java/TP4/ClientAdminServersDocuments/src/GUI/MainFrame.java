@@ -77,6 +77,18 @@ public class MainFrame extends javax.swing.JFrame
         }
     }
 
+    private void clearTable()
+    {
+        DefaultTableModel dtm = (DefaultTableModel)this.table.getModel();
+        int rowCount = dtm.getRowCount();
+
+        //Remove rows one by one from the end of the table
+        for (int i = rowCount - 1; i >= 0; i--)
+        {
+            dtm.removeRow(i);
+        }
+    }
+
     private void showStatus()
     {
         this.isConnected = this.sock != null && this.sock.isConnected();
@@ -88,6 +100,9 @@ public class MainFrame extends javax.swing.JFrame
             component.setEnabled(this.isConnected);
 
         this.table.setEnabled(this.isConnected);
+        this.table.getTableHeader().setEnabled(this.isConnected);
+        this.buttonClearTable.setEnabled(this.isConnected);
+
         this.labelIPServer.setEnabled(!this.isConnected);
         this.textFieldIPServer.setEnabled(!this.isConnected);
         this.labelPortServer.setEnabled(!this.isConnected);
@@ -246,6 +261,7 @@ public class MainFrame extends javax.swing.JFrame
         }
         finally
         {
+            this.clearTable();
             this.showStatus();
         }
     }
@@ -277,9 +293,11 @@ public class MainFrame extends javax.swing.JFrame
         buttonPause = new javax.swing.JButton();
         buttonResume = new javax.swing.JButton();
         buttonStop = new javax.swing.JButton();
+        panelBodyCenter = new javax.swing.JPanel();
         scrollPaneTable = new javax.swing.JScrollPane();
         table = new javax.swing.JTable();
         this.table.getTableHeader().setReorderingAllowed(false);
+        buttonClearTable = new javax.swing.JButton();
         buttonClear = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -464,6 +482,8 @@ public class MainFrame extends javax.swing.JFrame
 
         panelBody.add(panelBodyLeft, java.awt.BorderLayout.LINE_START);
 
+        panelBodyCenter.setLayout(new java.awt.BorderLayout());
+
         table.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][]
             {
@@ -496,7 +516,19 @@ public class MainFrame extends javax.swing.JFrame
         });
         scrollPaneTable.setViewportView(table);
 
-        panelBody.add(scrollPaneTable, java.awt.BorderLayout.CENTER);
+        panelBodyCenter.add(scrollPaneTable, java.awt.BorderLayout.CENTER);
+
+        buttonClearTable.setText("Clear table");
+        buttonClearTable.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                buttonClearTableActionPerformed(evt);
+            }
+        });
+        panelBodyCenter.add(buttonClearTable, java.awt.BorderLayout.PAGE_END);
+
+        panelBody.add(panelBodyCenter, java.awt.BorderLayout.CENTER);
 
         splitPane.setLeftComponent(panelBody);
 
@@ -533,6 +565,8 @@ public class MainFrame extends javax.swing.JFrame
     {//GEN-HEADEREND:event_buttonListClientsActionPerformed
         try
         {
+            this.clearTable();
+
             if (!this.isConnected)
                 throw new Exception("you must be logged in");
 
@@ -692,11 +726,17 @@ public class MainFrame extends javax.swing.JFrame
             MessageBoxes.ShowError(this, ex.getMessage(), "Unable to stop server");
         }
     }//GEN-LAST:event_buttonStopActionPerformed
+
+    private void buttonClearTableActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_buttonClearTableActionPerformed
+    {//GEN-HEADEREND:event_buttonClearTableActionPerformed
+        this.clearTable();
+    }//GEN-LAST:event_buttonClearTableActionPerformed
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Widgets">
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton buttonClear;
+    private javax.swing.JButton buttonClearTable;
     private javax.swing.JButton buttonConnect;
     private javax.swing.JButton buttonListClients;
     private javax.swing.JButton buttonPause;
@@ -709,6 +749,7 @@ public class MainFrame extends javax.swing.JFrame
     private javax.swing.JLabel labelStatus;
     private javax.swing.JLabel labelStatusInfo;
     private javax.swing.JPanel panelBody;
+    private javax.swing.JPanel panelBodyCenter;
     private javax.swing.JPanel panelBodyLeft;
     private javax.swing.JPanel panelHeader;
     private javax.swing.JPasswordField passwordField;
