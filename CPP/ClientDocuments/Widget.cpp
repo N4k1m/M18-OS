@@ -157,7 +157,7 @@ void Widget::on_pushButtonPlainText_clicked()
     {
         // Check if the user is connected to the server
         if (this->client_sock == NULL || !this->client_sock->isValid())
-            throw Exception("Disconnected from server");
+            throw Exception("Disconnected from server", 1);
 
         QString filename = QInputDialog::getText(
                     this, "Plain text file name", "Enter file name");
@@ -176,18 +176,17 @@ void Widget::on_pushButtonPlainText_clicked()
         // Send GETPLAIN query
         ret = this->client_sock->send(tmp_str);
         if (ret == SOCKET_CLOSED)
-            throw Exception("Connection to server closed");
+            throw Exception("Connection to server closed", 1);
 
         // Receive GETPLAIN
         ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
         if (ret == SOCKET_CLOSED)
-            throw Exception("Connection to server closed");
+            throw Exception("Connection to server closed", 1);
 
         this->displayMessage("Received : " + QString::fromStdString(tmp_str));
 
         // Create query object
         this->protocolManager.parseQuery(tmp_str);
-
 
         // If request failed
         if (this->protocolManager.is(GDOCP::FAIL))
@@ -210,8 +209,13 @@ void Widget::on_pushButtonPlainText_clicked()
     }
     catch(Exception const& ex)
     {
-        this->closeConnection();
-        this->setWidgetsEnable(false);
+        // Ask to close the connection if the exception code is set to 1
+        if (ex.code() > 0)
+        {
+            qDebug("on close la connexion");
+            this->setWidgetsEnable(false);
+            this->closeConnection();
+        }
 
         displayMessage("Error : " + QString(ex.what()));
         QMessageBox::critical(this, "Fatal Error", ex.what());
@@ -227,7 +231,7 @@ void Widget::on_pushButtonCipherText_clicked()
     {
         // Check if the user is connected to the server
         if (this->client_sock == NULL || !this->client_sock->isValid())
-            throw Exception("Disconnected from server");
+            throw Exception("Disconnected from server", 1);
 
         QString filename = QInputDialog::getText(
                     this, "Cipher text file name", "Enter file name");
@@ -246,12 +250,12 @@ void Widget::on_pushButtonCipherText_clicked()
         // Send GETCIPHER request
         ret = this->client_sock->send(tmp_str);
         if (ret == SOCKET_CLOSED)
-            throw Exception("Connection to server closed");
+            throw Exception("Connection to server closed", 1);
 
         // Receive GETCIPHER
         ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
         if (ret == SOCKET_CLOSED)
-            throw Exception("Connection to server closed");
+            throw Exception("Connection to server closed", 1);
 
         this->displayMessage("Received : " + QString::fromStdString(tmp_str));
 
@@ -279,8 +283,12 @@ void Widget::on_pushButtonCipherText_clicked()
     }
     catch(Exception const& ex)
     {
-        this->closeConnection();
-        this->setWidgetsEnable(false);
+        // Ask to close the connection if the exception code is set to 1
+        if (ex.code() > 0)
+        {
+            this->closeConnection();
+            this->setWidgetsEnable(false);
+        }
 
         displayMessage("Error : " + QString(ex.what()));
         QMessageBox::critical(this, "Fatal Error", ex.what());
