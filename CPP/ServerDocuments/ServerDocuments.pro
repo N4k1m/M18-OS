@@ -26,7 +26,8 @@ HEADERS += MainWindow.hpp \
     ../Utils/Exceptions/Exception.hpp \
     ThreadServer.hpp \
     ThreadServerPool.hpp \
-    ThreadClient.hpp
+    ThreadClient.hpp \
+    ThreadAdmin.hpp
 FORMS += MainWindow.ui
 SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Sockets/Socket.cpp \
@@ -41,7 +42,8 @@ SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Exceptions/Exception.cpp \
     ThreadServer.cpp \
     ThreadServerPool.cpp \
-    ThreadClient.cpp
+    ThreadClient.cpp \
+    ThreadAdmin.cpp
 
 DISTFILES += \
     server_documents.conf \
