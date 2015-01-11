@@ -2,16 +2,22 @@
 #include "ui_MainWindow.h"
 
 MainWindow::MainWindow(QWidget *parent) :
-    QWidget(parent), ui(new Ui::MainWindow), _threadServeur(NULL)
+    QWidget(parent), ui(new Ui::MainWindow), _threadServeur(NULL),
+    _threadAdmin(NULL), _threadServerStarted(false), _threadAdminStarted(false)
 {
     ui->setupUi(this);
 
     IniParser parser("server_documents.conf");
 
-    // Read port number from config file
-    if (parser.keyExists("port"))
-        this->ui->spinBoxPort->setValue(std::stoi(parser.value("port")));
+    // Read client port number from config file
+    if (parser.keyExists("clients_port"))
+        this->ui->spinBoxPort->setValue(std::stoi(parser.value("clients_port")));
 
+    // Read admin port number from config file
+    if (parser.keyExists("admin_port"))
+        this->ui->spinBoxPortAdmin->setValue(std::stoi(parser.value("admin_port")));
+
+    // Read the number of threads in pool from config file
     if (parser.keyExists("threads_client"))
         this->ui->spinBoxThreadsPool->setValue(std::stoi(parser.value("threads_client")));
 
@@ -21,17 +27,27 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow(void)
 {
-    if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
-        this->stopServer();
+    this->stopServer();
 
     delete this->_threadServeur;
+    delete this->_threadAdmin;
+
     delete this->ui;
 }
 
 void MainWindow::stopServer(void)
 {
-    this->_threadServeur->requestStop();
-    this->_threadServeur->wait();
+    if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
+    {
+        this->_threadServeur->requestStop();
+        this->_threadServeur->wait();
+    }
+
+    if (this->_threadAdmin != NULL && this->_threadAdmin->isRunning())
+    {
+        this->_threadAdmin->requestStop();
+        this->_threadAdmin->wait();
+    }
 }
 
 void MainWindow::displayMessage(const QString& msg)
@@ -46,18 +62,24 @@ void MainWindow::updateClientsCount(int clientsCount)
 
 void MainWindow::threadServerStarted(void)
 {
-    // Enable widgets
-    this->setWidgetsEnable(true);
+    this->_threadServerStarted = true;
+
+    // Enable widgets if both threads have started
+    if (this->_threadServerStarted && this->_threadAdminStarted)
+        this->setWidgetsEnable(true);
 
     // Display message
-    this->displayMessage("Server started on port " +
+    this->displayMessage("Thread server started on port " +
                          QString::number(this->ui->spinBoxPort->value()));
 }
 
 void MainWindow::threadServerFinished(void)
 {
-    // Desable widgets
-    this->setWidgetsEnable(false);
+    this->_threadServerStarted = false;
+
+    // Desable widgets if both threads have finished
+    if (!this->_threadServerStarted && !this->_threadAdminStarted)
+        this->setWidgetsEnable(false);
 
     // Suppression du thread
     delete this->_threadServeur;
@@ -66,12 +88,40 @@ void MainWindow::threadServerFinished(void)
     this->displayMessage("Thread server ended");
 }
 
+void MainWindow::threadAdminStarted(void)
+{
+    this->_threadAdminStarted = true;
+
+    // Enable widgets if both threads have started
+    if (this->_threadServerStarted && this->_threadAdminStarted)
+        this->setWidgetsEnable(true);
+
+    // Display message
+    this->displayMessage("Thread admin started on port " +
+                         QString::number(this->ui->spinBoxPortAdmin->value()));
+}
+
+void MainWindow::threadAdminFinished(void)
+{
+    this->_threadAdminStarted = false;
+
+    // Desable widgets if both threads have finished
+    if (!this->_threadServerStarted && !this->_threadAdminStarted)
+        this->setWidgetsEnable(false);
+
+    // Suppression du thread
+    delete this->_threadAdmin;
+    this->_threadAdmin = NULL;
+
+    this->displayMessage("Thread admin ended");
+}
+
 void MainWindow::on_pushButtonStart_clicked(void)
 {
-    // Server is running
-    if (this->_threadServeur != NULL && this->_threadServeur->isRunning())
-        this->stopServer();
+    // Stop server if running
+    this->stopServer();
 
+    // Start thread server
     //this->_threadServeur = new ThreadServer(this->ui->spinBoxPort->value(), 0);
     this->_threadServeur = new ThreadServerPool(
                                this->ui->spinBoxPort->value(),
@@ -87,6 +137,18 @@ void MainWindow::on_pushButtonStart_clicked(void)
             this, SLOT(threadServerFinished()));
 
     this->_threadServeur->start();
+
+    // Start thread admin
+    this->_threadAdmin = new ThreadAdmin(this->ui->spinBoxPortAdmin->value(), 0);
+
+    connect(this->_threadAdmin, SIGNAL(message(QString)),
+            this, SLOT(displayMessage(QString)));
+    connect(this->_threadAdmin, SIGNAL(started()),
+            this, SLOT(threadAdminStarted()));
+    connect(this->_threadAdmin, SIGNAL(finished()),
+            this, SLOT(threadAdminFinished()));
+
+    this->_threadAdmin->start();
 }
 
 void MainWindow::setWidgetsEnable(bool serverRunning)

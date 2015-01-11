@@ -5,6 +5,7 @@
 #include <QFileDialog>
 //#include "ThreadServer.hpp"       // Monothread
 #include "ThreadServerPool.hpp"     // Multithreads
+#include "ThreadAdmin.hpp"
 
 // Parser (default settings file)
 #include "../Utils/Parser/IniParser.hpp"
@@ -36,6 +37,9 @@ class MainWindow : public QWidget
         void threadServerStarted(void);
         void threadServerFinished(void);
 
+        void threadAdminStarted(void);
+        void threadAdminFinished(void);
+
         // Auto-connect private slots
         void on_pushButtonStart_clicked(void);
         void on_pushButtonStop_clicked(void);
@@ -45,6 +49,10 @@ class MainWindow : public QWidget
         Ui::MainWindow *ui;
         //ThreadServer* _threadServeur;     // Monothread
         ThreadServerPool* _threadServeur;   // Multithreads
+        ThreadAdmin* _threadAdmin;
+
+        bool _threadServerStarted;
+        bool _threadAdminStarted;
 };
 
 #endif /* __MAINWINDOW_HPP__ */
