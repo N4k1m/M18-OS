@@ -252,7 +252,17 @@ public class ThreadAdmin extends Thread
             if (!this.adminConnected)
                 throw new Exception("you must be logged in");
 
-            // TODO
+            // Send STOP request and delay to thread urgence
+            this.out.writeUTF("STOP");
+            this.out.writeUTF(this.query.getArg(0)); // arg 0 == delay (seconds)
+
+            // TODO : Armer un timer qui après delay seconds enverra un signal
+            // Dans le handler faire :
+            // --> renvoyer un info à chaque client qui se déconnecteront
+            // --> fermer le serveur
+
+            // Send ACK to admin client
+            DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
         }
         catch (Exception ex)
         {

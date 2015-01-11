@@ -175,7 +175,7 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.disconnectFromServer();
             System.out.println("[FAIL] Login failed : " + e.getMessage());
-            MessageBoxes.ShowError(e.getMessage(), "Login failed");
+            MessageBoxes.ShowError(this, e.getMessage(), "Login failed");
         }
         finally
         {
@@ -355,7 +355,7 @@ public class MainFrame extends javax.swing.JFrame
 
     public synchronized void showMessage(String title, String content)
     {
-        MessageBoxes.ShowMessage(content, title);
+        MessageBoxes.ShowMessage(this, content, title);
     }
     //</editor-fold>
 
@@ -680,7 +680,7 @@ public class MainFrame extends javax.swing.JFrame
         catch (Exception e)
         {
             System.out.println("[FAIL] " + e.getMessage());
-            MessageBoxes.ShowError(e.getMessage(), "Error");
+            MessageBoxes.ShowError(this, e.getMessage(), "Error");
             return;
         }
 
@@ -770,13 +770,13 @@ public class MainFrame extends javax.swing.JFrame
         {
             String cause = reply.getStringArg(0);
             System.out.println("[FAIL] " + cause);
-            MessageBoxes.ShowError(cause, "Request Error");
+            MessageBoxes.ShowError(this, cause, "Request Error");
         }
         else if (reply.is(SGDOCPCommand.NO_COMMAND) ||
                  reply.is(SGDOCPCommand.SOCK_ERROR))
         {
             this.disconnectFromServer();
-            MessageBoxes.ShowError("Disconnected from server",
+            MessageBoxes.ShowError(this, "Disconnected from server",
                                    "Disconnected from server");
         }
     }//GEN-LAST:event_buttonGetDocumentActionPerformed

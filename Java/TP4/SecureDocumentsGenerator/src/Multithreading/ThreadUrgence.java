@@ -54,6 +54,10 @@ public class ThreadUrgence extends Thread
                         this.manageRESUME();
                         break;
                     case "STOP":
+                        this.manageSTOP();
+                        break;
+                    default:
+                        System.out.println("[URG] Invalid instruction");
                         break;
                 }
             }
@@ -76,7 +80,7 @@ public class ThreadUrgence extends Thread
                 Socket clientSocket= this.clientUrgentSockets.get(i);
                 boolean connected = Request.quickSend("KEEPALIVE", clientSocket);
 
-                if (connected == false)
+                if (!connected)
                 {
                     System.out.println("[URG] disconnected client detected");
                     this.clientUrgentSockets.remove(i);
@@ -109,7 +113,7 @@ public class ThreadUrgence extends Thread
             Socket clientSocket= this.clientUrgentSockets.get(i);
             boolean connected = Request.quickSend("PAUSE", clientSocket);
 
-            if (connected == false)
+            if (!connected)
             {
                 System.out.println("[URG] disconnected client detected");
                 this.clientUrgentSockets.remove(i);
@@ -130,7 +134,7 @@ public class ThreadUrgence extends Thread
             Socket clientSocket= this.clientUrgentSockets.get(i);
             boolean connected = Request.quickSend("RESUME", clientSocket);
 
-            if (connected == false)
+            if (!connected)
             {
                 System.out.println("[URG] disconnected client detected");
                 this.clientUrgentSockets.remove(i);
@@ -141,6 +145,41 @@ public class ThreadUrgence extends Thread
                 catch (IOException ex){}
                 i--;
             }
+        }
+    }
+
+    private void manageSTOP()
+    {
+        try
+        {
+            String delay = this.in.readUTF();
+
+            Request request = new Request("STOP");
+            request.addArg(delay);
+
+            for (int i = 0; i < this.clientUrgentSockets.size(); i++)
+            {
+                Socket clientSocket= this.clientUrgentSockets.get(i);
+                boolean connected = request.send(clientSocket);
+
+                if (!connected)
+                {
+                    System.out.println("[URG] disconnected client detected");
+                    this.clientUrgentSockets.remove(i);
+                    try
+                    {
+                    clientSocket.close();
+                    }
+                    catch (IOException ex){}
+                    i--;
+                }
+            }
+
+        }
+        catch (IOException ex)
+        {
+            System.out.println("[FAIL] Thread urgence unable to get delay "
+                + "before server shutdown");
         }
     }
     //</editor-fold>

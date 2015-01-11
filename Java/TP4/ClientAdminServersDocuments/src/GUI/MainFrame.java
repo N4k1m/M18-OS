@@ -215,7 +215,7 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.disconnectFromServer();
             System.out.println("[FAIL] Login failed : " + ex.getMessage());
-            MessageBoxes.ShowError(ex.getMessage(), "Failed to connedct");
+            MessageBoxes.ShowError(this, ex.getMessage(), "Failed to connedct");
         }
         finally
         {
@@ -575,7 +575,7 @@ public class MainFrame extends javax.swing.JFrame
         catch (Exception ex)
         {
             System.out.println("[FAIL] Unable to list clients : " + ex.getMessage());
-            MessageBoxes.ShowError(ex.getMessage(), "Unable to list clients");
+            MessageBoxes.ShowError(this, ex.getMessage(), "Unable to list clients");
         }
     }//GEN-LAST:event_buttonListClientsActionPerformed
 
@@ -602,12 +602,12 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("Invalid reply");
 
             System.out.println("[ OK ] Server suspended");
-            MessageBoxes.ShowInfo("Server suspended", "Server suspended");
+            MessageBoxes.ShowInfo(this, "Server suspended", "Server suspended");
         }
         catch (Exception ex)
         {
             System.out.println("[FAIL] Unable to suspend server : " + ex.getMessage());
-            MessageBoxes.ShowError(ex.getMessage(), "Unable to suspend server");
+            MessageBoxes.ShowError(this, ex.getMessage(), "Unable to suspend server");
         }
     }//GEN-LAST:event_buttonPauseActionPerformed
 
@@ -634,12 +634,12 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("Invalid reply");
 
             System.out.println("[ OK ] Server resumed");
-            MessageBoxes.ShowInfo("Server resumed", "Server resumed");
+            MessageBoxes.ShowInfo(this, "Server resumed", "Server resumed");
         }
         catch (Exception ex)
         {
             System.out.println("[FAIL] Unable to resume server : " + ex.getMessage());
-            MessageBoxes.ShowError(ex.getMessage(), "Unable to resume server");
+            MessageBoxes.ShowError(this, ex.getMessage(), "Unable to resume server");
         }
     }//GEN-LAST:event_buttonResumeActionPerformed
 
@@ -651,7 +651,7 @@ public class MainFrame extends javax.swing.JFrame
 
             PanelNumberOfSeconds pnos = new PanelNumberOfSeconds();
             int option = JOptionPane.showOptionDialog(
-                null, pnos, "Number of second(s) before shutdown",
+                this, pnos, "Number of second(s) before shutdown",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
                 null, null, null);
 
@@ -684,12 +684,12 @@ public class MainFrame extends javax.swing.JFrame
                 throw new Exception("Invalid reply");
 
             System.out.println("[ OK ] Server will stop in " + delay + " seconds");
-            MessageBoxes.ShowInfo("Server will stop in " + delay + " seconds", "Server will stop");
+            MessageBoxes.ShowInfo(this, "Server will stop in " + delay + " seconds", "Server will stop");
         }
         catch (Exception ex)
         {
             System.out.println("[FAIL] Unable to stop server : " + ex.getMessage());
-            MessageBoxes.ShowError(ex.getMessage(), "Unable to stop server");
+            MessageBoxes.ShowError(this, ex.getMessage(), "Unable to stop server");
         }
     }//GEN-LAST:event_buttonStopActionPerformed
     //</editor-fold>

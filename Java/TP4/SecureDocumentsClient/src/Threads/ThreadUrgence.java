@@ -47,7 +47,6 @@ public class ThreadUrgence extends Thread
                     this.parent.setServerSuspended(false);
                     break;
                 case "STOP":
-
                     this.parent.showMessage("Server shutdown",
                                             "Server will be down in "    +
                                             this.request.getStringArg(0) +
