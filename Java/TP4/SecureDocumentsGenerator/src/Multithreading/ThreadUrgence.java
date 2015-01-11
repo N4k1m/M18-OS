@@ -74,11 +74,12 @@ public class ThreadUrgence extends Thread
     {
         try
         {
+            Request request = new Request("KEEPALIVE");
             // Check if clients are already connected
             for (int i = 0; i < this.clientUrgentSockets.size(); i++)
             {
                 Socket clientSocket= this.clientUrgentSockets.get(i);
-                boolean connected = Request.quickSend("KEEPALIVE", clientSocket);
+                boolean connected = request.send(clientSocket);
 
                 if (!connected)
                 {
@@ -108,10 +109,12 @@ public class ThreadUrgence extends Thread
 
     private void managePAUSE()
     {
+        Request request = new Request("PAUSE");
+
         for (int i = 0; i < this.clientUrgentSockets.size(); i++)
         {
             Socket clientSocket= this.clientUrgentSockets.get(i);
-            boolean connected = Request.quickSend("PAUSE", clientSocket);
+            boolean connected = request.send(clientSocket);
 
             if (!connected)
             {
@@ -129,10 +132,12 @@ public class ThreadUrgence extends Thread
 
     private void manageRESUME()
     {
+        Request request = new Request("RESUME");
+
         for (int i = 0; i < this.clientUrgentSockets.size(); i++)
         {
             Socket clientSocket= this.clientUrgentSockets.get(i);
-            boolean connected = Request.quickSend("RESUME", clientSocket);
+            boolean connected = request.send(clientSocket);
 
             if (!connected)
             {
