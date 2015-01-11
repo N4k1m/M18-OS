@@ -117,13 +117,25 @@ public class MainFrame extends javax.swing.JFrame
         {
             this.sock = new Socket(ip, port);
 
-            // TODO : login procedure
+            // Login procedure
+
+            // Build and send LOGIN query
             DOCSAPRequest request = new DOCSAPRequest(DOCSAPRequest.LOGINA);
-            request.addArg("xavier");
-            request.addArg("m910719X");
+            request.addArg(this.textFieldLogin.getText());
+            request.addArg(new String(this.passwordField.getPassword()));
             DOCSAPRequest reply = request.sendAndRecv(this.sock);
 
-            // TODO gérer la réponse
+            // If server closed the connection
+            if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+                throw new Exception("Disconnected from server");
+
+            // If LCLIENTS failed
+            if (reply.is(DOCSAPRequest.FAIL))
+                throw new Exception(reply.getArg(0)); // arg 0 = cause
+
+            // Invalid reply
+            if (!reply.is(DOCSAPRequest.ACK))
+                throw new Exception("Invalid reply");
         }
         catch (UnknownHostException ex)
         {
@@ -135,9 +147,9 @@ public class MainFrame extends javax.swing.JFrame
         }
         catch (Exception ex)
         {
+            this.disconnectFromServer();
             System.out.println("[FAIL] Login failed : " + ex.getMessage());
             MessageBoxes.ShowError(ex.getMessage(), "Failed to connedct");
-            this.disconnectFromServer();
         }
         finally
         {

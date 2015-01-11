@@ -1,5 +1,6 @@
 package Multithreading;
 
+import DB.BeanDBAccessMySQL;
 import DOCSAP.DOCSAPRequest;
 import GUI.MainFrame;
 import Utils.ReturnValue;
@@ -10,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.ResultSet;
 
 /**
  *
@@ -26,6 +28,7 @@ public class ThreadAdmin extends Thread
 
         this.isStopped = true;
         this.clientStop = true;
+        this.adminConnected = false;
 
         this.parent = parent;
 
@@ -41,10 +44,16 @@ public class ThreadAdmin extends Thread
     {
         try
         {
+            // Connect to the data base
+            this.db = new BeanDBAccessMySQL();
+            if (!this.db.init())
+                throw new Exception("Unable to connect to the database");
+
+            // Creatre server socket
             this.socketServer = new ServerSocket(this.port);
             System.out.println("[ADMI] Thread administrator started on port " + this.port);
         }
-        catch (IOException ex)
+        catch (Exception ex)
         {
             System.err.println(ex);
             System.exit(ReturnValue.FAILURE.getReturnCode());
@@ -61,6 +70,7 @@ public class ThreadAdmin extends Thread
                 System.out.println("[ADMI] Waiting administrator");
                 this.socketClient = this.socketServer.accept();
                 this.clientStop = false;
+                this.adminConnected = false;
                 System.out.println("[ADMI] New administrator connected");
             }
             catch (IOException ex)
@@ -81,8 +91,10 @@ public class ThreadAdmin extends Thread
                 {
                     case DOCSAPRequest.SOCK_ERROR:
                     case DOCSAPRequest.NO_COMMAND:
-                        this.clientStop = true;
-                        System.out.println("[ OK ] Interrupted. Stop receiving message");
+                        this.manageERROR();
+                        break;
+                    case DOCSAPRequest.LOGINA:
+                        this.manageLOGINA();
                         break;
                     case DOCSAPRequest.LCLIENTS:
                         this.manageLCLIENTS();
@@ -93,15 +105,17 @@ public class ThreadAdmin extends Thread
                     case DOCSAPRequest.RESUME:
                         this.manageRESUME();
                         break;
+                    case DOCSAPRequest.STOP:
+                        this.manageSTOP();
+                        break;
                     case DOCSAPRequest.QUIT:
-                        this.clientStop = true;
-                        System.out.println("[ADMI] Administrator quit");
-                        DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
+                        this.manageQUIT();
                         break;
                     default:
-                        System.out.println("[ADMI] command : " + this.query.getCommand());
-                        System.out.println("[ADMI] Params  : " + this.query.getArgs());
-                        DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
+                        System.out.println("[ADMI] Invalid query");
+                        DOCSAPRequest.quickSend(DOCSAPRequest.FAIL,
+                                                "Invalid query",
+                                                this.socketClient);
                 }
             }
         }
@@ -109,10 +123,49 @@ public class ThreadAdmin extends Thread
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Private methods">
+    private void manageERROR()
+    {
+        this.clientStop = true;
+        System.out.println("[ OK ] Interrupted. Stop receiving message");
+    }
+
+    private void manageLOGINA()
+    {
+        try
+        {
+            // Get admin password from DB
+            ResultSet rsLogin = this.db.selectAll(
+                "server_admin", "login LIKE \"" + this.query.getArg(0) + "\"");
+
+            // Check if we have a result
+            if (!rsLogin.next())
+                throw new Exception("Administrator " + this.query.getArg(0) + " not allowed");
+
+            String dbPassword = rsLogin.getString("password");
+            String password = this.query.getArg(1);
+
+            if (dbPassword == null || dbPassword.compareTo(password) != 0)
+                throw new Exception("Invalid password");
+
+            // Valid login - password. Send ACK
+            this.adminConnected = true;
+            DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
+        }
+        catch (Exception ex)
+        {
+            this.adminConnected = false;
+            DOCSAPRequest.quickSend(
+                DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
+        }
+    }
+
     private void manageLCLIENTS()
     {
         try
         {
+            if (!this.adminConnected)
+                throw new Exception("you must be logged in");
+
             // Send LCLIENTS request to thread urgence
             this.out.writeUTF("LCLIENTS");
 
@@ -130,9 +183,8 @@ public class ThreadAdmin extends Thread
         }
         catch (Exception ex)
         {
-            System.out.println("[FAIL] enable to list clients : " +
+            System.out.println("[FAIL] Unable to list clients : " +
                 ex.getMessage());
-
             DOCSAPRequest.quickSend(
                 DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
         }
@@ -142,6 +194,9 @@ public class ThreadAdmin extends Thread
     {
         try
         {
+            if (!this.adminConnected)
+                throw new Exception("you must be logged in");
+
             // Send PAUSE request to thread urgence
             this.out.writeUTF("PAUSE");
 
@@ -158,9 +213,10 @@ public class ThreadAdmin extends Thread
         }
         catch (Exception ex)
         {
-            System.out.println("[FAIL] enable to suspend server : " +
+            System.out.println("[FAIL] Unable to suspend server : " +
                 ex.getMessage());
-            DOCSAPRequest.quickSend(DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
+            DOCSAPRequest.quickSend(
+                DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
         }
     }
 
@@ -168,6 +224,9 @@ public class ThreadAdmin extends Thread
     {
         try
         {
+            if (!this.adminConnected)
+                throw new Exception("you must be logged in");
+
             // Send PAUSE request to thread urgence
             this.out.writeUTF("RESUME");
 
@@ -179,10 +238,37 @@ public class ThreadAdmin extends Thread
         }
         catch (Exception ex)
         {
-            System.out.println("[FAIL] enable to resume server : " +
+            System.out.println("[FAIL] Unable to resume server : " +
                 ex.getMessage());
-            DOCSAPRequest.quickSend(DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
+            DOCSAPRequest.quickSend(
+                DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
         }
+    }
+
+    private void manageSTOP()
+    {
+        try
+        {
+            if (!this.adminConnected)
+                throw new Exception("you must be logged in");
+
+            // TODO
+        }
+        catch (Exception ex)
+        {
+            System.out.println("[FAIL] Unable to stop server : " +
+                ex.getMessage());
+            DOCSAPRequest.quickSend(
+                DOCSAPRequest.FAIL, ex.getMessage(), this.socketClient);
+        }
+    }
+
+    private void manageQUIT()
+    {
+        this.clientStop = true;
+
+        System.out.println("[ADMI] Administrator quit");
+        DOCSAPRequest.quickSend(DOCSAPRequest.ACK, this.socketClient);
     }
     //</editor-fold>
 
@@ -207,12 +293,13 @@ public class ThreadAdmin extends Thread
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Private Variables">
-    int port;
+    private int port;
     private ServerSocket socketServer;
     private Socket socketClient;
 
     private boolean isStopped;
     private boolean clientStop;
+    private boolean adminConnected;
 
     private DOCSAPRequest query;
 
@@ -221,5 +308,8 @@ public class ThreadAdmin extends Thread
     // Pipe
     private DataOutputStream out;
     private DataInputStream in;
+
+    // DB access
+    private BeanDBAccessMySQL db;
     //</editor-fold>
 }
