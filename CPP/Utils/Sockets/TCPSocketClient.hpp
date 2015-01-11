@@ -41,7 +41,6 @@ class TCPSocketClient : public Socket
         template <class T>
         ssize_t send(const void* data, size_t length) const
         {
-            std::cout << "send ..." << std::endl;
             ssize_t total = 0;
             while (total < (ssize_t) (sizeof (T) * length))
             {
