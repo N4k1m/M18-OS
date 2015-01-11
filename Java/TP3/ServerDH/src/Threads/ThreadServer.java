@@ -248,10 +248,18 @@ public class ThreadServer extends Thread
     {
         this.stopRequested = true;
 
+        // Close socket client
         if (this.socketClient != null && this.socketClient.isConnected())
             this.socketClient.close();
 
-        this.socketServer.close();
+        // Close socket server
+        if (this.socketServer != null)
+            this.socketServer.close();
+    }
+
+    public synchronized boolean isStopped()
+    {
+        return this.stopRequested;
     }
     //</editor-fold>
 
@@ -271,7 +279,7 @@ public class ThreadServer extends Thread
         }
 
         // Main loop
-        while(!this.stopRequested)
+        while(!this.isStopped())
         {
             try
             {
