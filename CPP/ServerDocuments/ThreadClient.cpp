@@ -87,7 +87,7 @@ void ThreadClient::run(void)
                         manageGETCIPHER();
                         break;
                     case GDOCP::CLOSE:
-                        emit message("Thread client : client ask to close");
+                        emit message("Thread client : client requested to close");
                         break;
                     default:
                         emit message("Thread client : received invalid query");
