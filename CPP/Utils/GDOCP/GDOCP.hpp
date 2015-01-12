@@ -52,8 +52,10 @@ class GDOCP
         void setHeaderValue(const std::string& header,
                             const std::string& value);
 
-        bool is(GDOCPCommand command);
+        bool is(GDOCPCommand command) const;
         void clearHeaders(void);
+
+        virtual ~GDOCP(void);
 
     protected:
 

@@ -192,7 +192,7 @@ void GDOCP::setHeaderValue(const string &header, const string &value)
     this->_headers[newHeader] = value;
 }
 
-bool GDOCP::is(GDOCPCommand command)
+bool GDOCP::is(GDOCPCommand command) const
 {
     return this->_command == command;
 }
@@ -200,4 +200,9 @@ bool GDOCP::is(GDOCPCommand command)
 void GDOCP::clearHeaders(void)
 {
     this->_headers.clear();
+}
+
+GDOCP::~GDOCP(void)
+{
+    // Nothing to do here ...
 }
