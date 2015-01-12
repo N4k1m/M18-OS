@@ -2,8 +2,13 @@
 #include "ui_Widget.h"
 
 Widget::Widget(QWidget *parent) :
-    QWidget(parent), ui(new Ui::Widget), client_sock(NULL), protocolManager(),
-    primeGenerator(), _serverSuspended(false)
+    QWidget(parent),
+    ui(new Ui::Widget),
+    _threadAdmin(NULL),
+    _clientSocket(NULL),
+    protocolManager(),
+    primeGenerator(),
+    _serverSuspended(false)
 
 {
     this->ui->setupUi(this);
@@ -35,11 +40,18 @@ Widget::Widget(QWidget *parent) :
 
     // Generate prime numbers up to 1000000
     primeGenerator.init_fast(1000000);
+
+    this->showStatus();
 }
 
 Widget::~Widget(void)
 {
-    delete this->client_sock;
+    delete this->_threadAdmin;
+    this->_threadAdmin = NULL;
+
+    delete this->_clientSocket;
+    this->_clientSocket = NULL;
+
     delete this->ui;
 }
 
@@ -50,15 +62,69 @@ void Widget::setWidgetsEnable(bool client_connected)
     this->ui->lineEditUsername->setEnabled(!client_connected);
     this->ui->lineEditPassword->setEnabled(!client_connected);
     this->ui->pushButtonConnect->setEnabled(!client_connected);
-
     this->ui->pushButtonDisconnect->setEnabled(client_connected);
     this->ui->pushButtonPlainText->setEnabled(client_connected);
     this->ui->pushButtonCipherText->setEnabled(client_connected);
 }
 
+void Widget::showStatus(void)
+{
+    bool isConnected = this->_clientSocket != NULL &&
+                       this->_clientSocket->isValid();
+
+    this->setWidgetsEnable(isConnected);
+
+    // If client is connected to server
+    if (isConnected)
+    {
+        // If server is suspended
+        if (this->_serverSuspended)
+        {
+            this->ui->labelStatus->setStyleSheet("QLabel { color : orange; }");
+            this->ui->labelStatus->setText("Connected - Server suspended");
+
+            // Desable request buttons
+            this->ui->pushButtonPlainText->setEnabled(false);
+            this->ui->pushButtonCipherText->setEnabled(false);
+        }
+        else
+        {
+            this->ui->labelStatus->setStyleSheet("QLabel { color : green; }");
+            this->ui->labelStatus->setText("Connected");
+        }
+    }
+    else
+    {
+        this->ui->labelStatus->setStyleSheet("QLabel { color : red; }");
+        this->ui->labelStatus->setText("Disconnected");
+    }
+}
+
 void Widget::displayMessage(const QString &message)
 {
     this->ui->plainTextEditConsole->appendPlainText(message);
+}
+
+void Widget::threadAdminStarted(void)
+{
+    // Display message
+    this->displayMessage("Thread admin started");
+}
+
+void Widget::threadAdminFinished(void)
+{
+    // Delete thread admin
+    delete this->_threadAdmin;
+    this->_threadAdmin = NULL;
+
+    // Display message
+    this->displayMessage("Thread admin ended");
+}
+
+void Widget::serverSuspended(bool suspended)
+{
+    this->_serverSuspended = suspended;
+    this->showStatus();
 }
 
 void Widget::on_pushButtonConnect_clicked(void)
@@ -91,7 +157,7 @@ void Widget::on_pushButtonConnect_clicked(void)
         this->closeConnection();
 
         // Create client TCP socket
-        this->client_sock = new TCPSocketClient;
+        this->_clientSocket = new TCPSocketClient;
 
         // Console display
         std::string host = this->ui->lineEditIPServer->text().toStdString();
@@ -101,15 +167,31 @@ void Widget::on_pushButtonConnect_clicked(void)
                              + " on port " + QString::number(port));
 
         // Connect to host
-        this->client_sock->connectToHost(host, port);
+        this->_clientSocket->connectToHost(host, port);
         this->displayMessage("Connected !");
 
         // Login procedure
         this->loginProcedure();
-        this->setWidgetsEnable(true);
+
+        // Create and start thread admin
+        this->_threadAdmin = new ThreadAdmin;
+
+        connect(this->_threadAdmin, SIGNAL(message(QString)),
+                this, SLOT(displayMessage(QString)));
+        connect(this->_threadAdmin, SIGNAL(started()),
+                this, SLOT(threadAdminStarted()));
+        connect(this->_threadAdmin, SIGNAL(finished()),
+                this, SLOT(threadAdminFinished()));
+        connect(this->_threadAdmin, SIGNAL(serverSuspended(bool)),
+                this, SLOT(serverSuspended(bool)));
+
+        this->_threadAdmin->start();
 
         // Connection succeed, server isn't suspended
         this->_serverSuspended = false;
+
+        // Update status and widgets
+        this->showStatus();
     }
     catch(SocketException const& ex)
     {
@@ -130,7 +212,7 @@ void Widget::on_pushButtonConnect_clicked(void)
 void Widget::on_pushButtonDisconnect_clicked(void)
 {
     // Already disconnected
-    if (this->client_sock == NULL || !this->client_sock->isValid())
+    if (this->_clientSocket == NULL || !this->_clientSocket->isValid())
         return;
 
     try
@@ -138,12 +220,12 @@ void Widget::on_pushButtonDisconnect_clicked(void)
         this->displayMessage("Send CLOSE command");
 
         this->protocolManager.setNewCommand(GDOCP::CLOSE);
-        this->client_sock->send(this->protocolManager.generateQuery());
+        this->_clientSocket->send(this->protocolManager.generateQuery());
 
         this->closeConnection();
         this->displayMessage("Disconnected !");
 
-        this->setWidgetsEnable(false);
+        this->showStatus();
     }
     catch(const SocketException& ex)
     {
@@ -159,7 +241,7 @@ void Widget::on_pushButtonPlainText_clicked(void)
     try
     {
         // Check if the user is connected to the server
-        if (this->client_sock == NULL || !this->client_sock->isValid())
+        if (this->_clientSocket == NULL || !this->_clientSocket->isValid())
             throw Exception("Disconnected from server", 1);
 
         QString filename = QInputDialog::getText(
@@ -177,12 +259,12 @@ void Widget::on_pushButtonPlainText_clicked(void)
         this->displayMessage("Send : " + QString::fromStdString(tmp_str));
 
         // Send GETPLAIN query
-        ret = this->client_sock->send(tmp_str);
+        ret = this->_clientSocket->send(tmp_str);
         if (ret == SOCKET_CLOSED)
             throw Exception("Connection to server closed", 1);
 
         // Receive GETPLAIN
-        ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
+        ret = this->_clientSocket->recv(tmp_str, this->protocolManager.endDelimiter());
         if (ret == SOCKET_CLOSED)
             throw Exception("Connection to server closed", 1);
 
@@ -205,7 +287,7 @@ void Widget::on_pushButtonPlainText_clicked(void)
     catch(SocketException const& ex)
     {
         this->closeConnection();
-        this->setWidgetsEnable(false);
+        this->showStatus();
 
         displayMessage("Error : " + QString(ex.what()));
         QMessageBox::critical(this, "Fatal Error", ex.what());
@@ -215,8 +297,8 @@ void Widget::on_pushButtonPlainText_clicked(void)
         // Ask to close the connection if the exception code is set to 1
         if (ex.code() > 0)
         {
-            this->setWidgetsEnable(false);
             this->closeConnection();
+            this->showStatus();
         }
 
         displayMessage("Error : " + QString(ex.what()));
@@ -232,7 +314,7 @@ void Widget::on_pushButtonCipherText_clicked(void)
     try
     {
         // Check if the user is connected to the server
-        if (this->client_sock == NULL || !this->client_sock->isValid())
+        if (this->_clientSocket == NULL || !this->_clientSocket->isValid())
             throw Exception("Disconnected from server", 1);
 
         QString filename = QInputDialog::getText(
@@ -250,12 +332,12 @@ void Widget::on_pushButtonCipherText_clicked(void)
         this->displayMessage("Send : " + QString::fromStdString(tmp_str));
 
         // Send GETCIPHER request
-        ret = this->client_sock->send(tmp_str);
+        ret = this->_clientSocket->send(tmp_str);
         if (ret == SOCKET_CLOSED)
             throw Exception("Connection to server closed", 1);
 
         // Receive GETCIPHER
-        ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
+        ret = this->_clientSocket->recv(tmp_str, this->protocolManager.endDelimiter());
         if (ret == SOCKET_CLOSED)
             throw Exception("Connection to server closed", 1);
 
@@ -316,12 +398,12 @@ void Widget::loginProcedure(void) // Throws SocketException and Exception
     this->displayMessage("Send : " + QString::fromStdString(tmp_str));
 
     // Send LOGIN request with username
-    ret = this->client_sock->send(tmp_str);
+    ret = this->_clientSocket->send(tmp_str);
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
     // Receive LOGIN ack and nonce
-    ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
+    ret = this->_clientSocket->recv(tmp_str, this->protocolManager.endDelimiter());
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
@@ -360,12 +442,12 @@ void Widget::loginProcedure(void) // Throws SocketException and Exception
     displayMessage("Send : " + QString::fromStdString(tmp_str));
 
     // Send LOGIN request with cnonce and hashpassword
-    ret = this->client_sock->send(tmp_str);
+    ret = this->_clientSocket->send(tmp_str);
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
     // Receive LOGIN or FAIL
-    ret = this->client_sock->recv(tmp_str, this->protocolManager.endDelimiter());
+    ret = this->_clientSocket->recv(tmp_str, this->protocolManager.endDelimiter());
     if (ret == SOCKET_CLOSED)
         throw Exception("Connection to server closed");
 
@@ -385,6 +467,14 @@ void Widget::loginProcedure(void) // Throws SocketException and Exception
 
 void Widget::closeConnection(void)
 {
-    delete this->client_sock;
-    this->client_sock = NULL;
+    // Stop thread client
+    if (this->_threadAdmin != NULL && this->_threadAdmin->isRunning())
+    {
+        this->_threadAdmin->requestStop();
+        this->_threadAdmin->wait();
+    }
+
+    // close client connection
+    delete this->_clientSocket;
+    this->_clientSocket = NULL;
 }

@@ -1,16 +1,27 @@
 #include "ThreadAdmin.hpp"
 
 ThreadAdmin::ThreadAdmin(int port, QObject* parent) :
-    QThread(parent), _port(port), _serverSocket(NULL), _clientSocket(NULL),
-    _protocolManager(), _clientLoggedIn(false), _stopRequested(false)
+    QThread(parent),
+    _port(port),
+    _portAdminClient(DEFAULT_PORT_ADMIN_CLIENT),
+    _serverSocket(NULL),
+    _clientSocket(NULL),
+    _protocolManager(),
+    _clientLoggedIn(false),
+    _stopRequested(false)
 {
-    // Get DOCSAP delimiters
     IniParser parser("server_documents.conf");
 
+    // Get DOCSAP delimiters
     if (parser.keyExists("DOCSAP_fieldDelimiter"))
         this->_protocolManager.setFieldDelimiter(parser.value("DOCSAP_fieldDelimiter"));
     if (parser.keyExists("DOCSAP_endDelimiter"))
         this->_protocolManager.setEndDelimiter(parser.value("DOCSAP_endDelimiter"));
+
+    // Get get port admin on client side
+    if (parser.keyExists("client_admin_port"))
+        this->_portAdminClient = std::stoi(parser.value("client_admin_port"));
+
 }
 
 ThreadAdmin::~ThreadAdmin(void)
@@ -190,7 +201,7 @@ void ThreadAdmin::manageLCLIENTS(void)
 
     // Get all client's IPv4
     conditionMutex.lock();
-    for (int i(0); i < clients.size(); ++i)
+    for (int i(0); i < clients.count(); ++i)
         this->_protocolManager.addArg(clients.at(i)->getIPv4());
     conditionMutex.unlock();
 
@@ -200,24 +211,28 @@ void ThreadAdmin::manageLCLIENTS(void)
 
 void ThreadAdmin::managePAUSE(void)
 {
+    // Emit a signal to GUI and thread server
     emit suspendServer(true);
 
-    // TODO : se connecter chez chaque client en envoyer pause
+    // Create query PAUSE
+    AGDOCProtocol query;
+    query.command = AGDOCProtocol::PAUSE;
 
-    // Send ACK
-    this->_protocolManager.setNewCommand(DOCSAP::ACK);
-    this->_clientSocket->send(this->_protocolManager.generateQuery());
+    // Inform all clients
+    this->informAllClients(query);
 }
 
 void ThreadAdmin::manageRESUME(void)
 {
+    // Emit a signal to GUI and thread server
     emit suspendServer(false);
 
-    // TODO : se connecter chez chaque client en envoyer RESUME
+    // Create query PAUSE
+    AGDOCProtocol query;
+    query.command = AGDOCProtocol::RESUME;
 
-    // Send ACK
-    this->_protocolManager.setNewCommand(DOCSAP::ACK);
-    this->_clientSocket->send(this->_protocolManager.generateQuery());
+    // Inform all clients
+    this->informAllClients(query);
 }
 
 void ThreadAdmin::manageQUIT(void)
@@ -238,6 +253,46 @@ void ThreadAdmin::sendFAILMessage(const QString& cause)
     this->_protocolManager.addArg(cause.toStdString());
     this->_clientSocket->send(this->_protocolManager.generateQuery());
     emit message("[ADMIN] " + cause);
+}
+
+void ThreadAdmin::informAllClients(const AGDOCProtocol& request)
+{
+    // Prepare reply
+    this->_protocolManager.setNewCommand(DOCSAP::ACK);
+
+    // Get all IPv4 addresses
+    QList<std::string> ips;
+    conditionMutex.lock();
+    for (int i(0); i < clients.size(); ++i)
+        ips.append(clients.at(i)->getIPv4());
+    conditionMutex.unlock();
+
+    if (!ips.isEmpty())
+    {
+        try
+        {
+            emit message("[ADMIN] Infoms all clients");
+
+            // Send query to all clients
+            TCPSocketClient* sockClient;
+            for (int i(0); i < ips.count(); ++i)
+            {
+                sockClient = new TCPSocketClient();
+                sockClient->connectToHost(ips.at(i), this->_portAdminClient);
+                sockClient->send<AGDOCProtocol>(&request);
+                delete sockClient;
+            }
+        }
+        catch(const SocketException& exception)
+        {
+            // Reply FAIL
+            this->_protocolManager.setNewCommand(DOCSAP::FAIL);
+            this->_protocolManager.addArg(exception.what());
+        }
+    }
+
+    // Send Reply
+    this->_clientSocket->send(this->_protocolManager.generateQuery());
 }
 
 bool ThreadAdmin::stopRequested(void)

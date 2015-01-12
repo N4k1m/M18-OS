@@ -148,7 +148,7 @@ void MainWindow::on_pushButtonStart_clicked(void)
     // Stop server if running
     this->stopServer();
 
-    // Start thread server
+    // Create and start thread server
     //this->_threadServeur = new ThreadServer(this->ui->spinBoxPort->value(), 0);
     this->_threadServeur = new ThreadServerPool(
                                this->ui->spinBoxPort->value(),
@@ -165,7 +165,7 @@ void MainWindow::on_pushButtonStart_clicked(void)
 
     this->_threadServeur->start();
 
-    // Start thread admin
+    // Create and start thread admin
     this->_threadAdmin = new ThreadAdmin(this->ui->spinBoxPortAdmin->value(), 0);
 
     // Connect thread admin to GUI

@@ -11,9 +11,12 @@
 
 // Protocol
 #include "../Utils/DOCSAP/DOCSAP.hpp"
+#include "../Utils/AGDOCP/AGDOCProtocol.hpp"
 
 // Parser
 #include "../Utils/Parser/IniParser.hpp"
+
+#define DEFAULT_PORT_ADMIN_CLIENT 8001
 
 // Global declaration
 extern QMutex conditionMutex;
@@ -53,6 +56,7 @@ class ThreadAdmin : public QThread
         void manageFAIL(void);
 
         void sendFAILMessage(QString const& cause);
+        void informAllClients(const AGDOCProtocol& request);
 
         // TODO à voir si j'utilise
 
@@ -65,6 +69,7 @@ class ThreadAdmin : public QThread
     private:
 
         int _port;
+        int _portAdminClient;
         TCPSocketServer* _serverSocket;
         TCPSocketClient* _clientSocket;
 

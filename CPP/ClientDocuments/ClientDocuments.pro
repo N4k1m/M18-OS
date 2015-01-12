@@ -24,7 +24,8 @@ SOURCES += main.cpp\
     ../Utils/Hash/Hash.cpp \
     ../Utils/Hash/RandomPrimeGenerator.cpp \
     ../Utils/Parser/IniParser.cpp \
-    ../Utils/Exceptions/Exception.cpp
+    ../Utils/Exceptions/Exception.cpp \
+    ThreadAdmin.cpp
 
 HEADERS  += Widget.hpp \
     ../Utils/Sockets/Socket.hpp \
@@ -36,7 +37,9 @@ HEADERS  += Widget.hpp \
     ../Utils/Hash/Hash.hpp \
     ../Utils/Hash/RandomPrimeGenerator.hpp \
     ../Utils/Parser/IniParser.hpp \
-    ../Utils/Exceptions/Exception.hpp
+    ../Utils/Exceptions/Exception.hpp \
+    ThreadAdmin.hpp \
+    ../Utils/AGDOCP/AGDOCProtocol.hpp
 
 FORMS    += Widget.ui
 

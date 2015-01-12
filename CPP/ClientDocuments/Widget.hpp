@@ -4,6 +4,8 @@
 #include <QtWidgets>
 #include <QString>
 
+#include "ThreadAdmin.hpp"
+
 // Networking
 #include "../Utils/Sockets/TCPSocketClient.hpp"
 
@@ -36,7 +38,13 @@ class Widget : public QWidget
     private slots:
 
         void setWidgetsEnable(bool client_connected);
+        void showStatus(void);
         void displayMessage(const QString& message);
+
+        // Thread admin signals management
+        void threadAdminStarted(void);
+        void threadAdminFinished(void);
+        void serverSuspended(bool suspended);
 
         // Auto-connect
         void on_pushButtonConnect_clicked(void);
@@ -52,9 +60,10 @@ class Widget : public QWidget
 
     protected:
 
-        Ui::Widget *ui;
+        Ui::Widget* ui;
+        ThreadAdmin* _threadAdmin;
 
-        TCPSocketClient* client_sock;
+        TCPSocketClient* _clientSocket;
         GDOCP protocolManager;
         RandomPrimeGenerator primeGenerator;
 
