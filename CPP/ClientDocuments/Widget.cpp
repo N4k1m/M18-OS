@@ -3,7 +3,7 @@
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent), ui(new Ui::Widget), client_sock(NULL), protocolManager(),
-    primeGenerator()
+    primeGenerator(), _serverSuspended(false)
 
 {
     this->ui->setupUi(this);
@@ -61,7 +61,7 @@ void Widget::displayMessage(const QString &message)
     this->ui->plainTextEditConsole->appendPlainText(message);
 }
 
-void Widget::on_pushButtonConnect_clicked()
+void Widget::on_pushButtonConnect_clicked(void)
 {
     // Some checks
     try
@@ -107,6 +107,9 @@ void Widget::on_pushButtonConnect_clicked()
         // Login procedure
         this->loginProcedure();
         this->setWidgetsEnable(true);
+
+        // Connection succeed, server isn't suspended
+        this->_serverSuspended = false;
     }
     catch(SocketException const& ex)
     {
@@ -124,7 +127,7 @@ void Widget::on_pushButtonConnect_clicked()
     }
 }
 
-void Widget::on_pushButtonDisconnect_clicked()
+void Widget::on_pushButtonDisconnect_clicked(void)
 {
     // Already disconnected
     if (this->client_sock == NULL || !this->client_sock->isValid())
@@ -148,7 +151,7 @@ void Widget::on_pushButtonDisconnect_clicked()
     }
 }
 
-void Widget::on_pushButtonPlainText_clicked()
+void Widget::on_pushButtonPlainText_clicked(void)
 {
     std::string tmp_str;
     ssize_t ret;
@@ -221,7 +224,7 @@ void Widget::on_pushButtonPlainText_clicked()
     }
 }
 
-void Widget::on_pushButtonCipherText_clicked()
+void Widget::on_pushButtonCipherText_clicked(void)
 {
     std::string tmp_str;
     ssize_t ret;
@@ -294,7 +297,7 @@ void Widget::on_pushButtonCipherText_clicked()
     }
 }
 
-void Widget::on_pushButtonClear_clicked()
+void Widget::on_pushButtonClear_clicked(void)
 {
     this->ui->plainTextEditConsole->clear();
 }

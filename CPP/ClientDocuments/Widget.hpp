@@ -39,11 +39,11 @@ class Widget : public QWidget
         void displayMessage(const QString& message);
 
         // Auto-connect
-        void on_pushButtonConnect_clicked();
-        void on_pushButtonDisconnect_clicked();
-        void on_pushButtonPlainText_clicked();
-        void on_pushButtonCipherText_clicked();
-        void on_pushButtonClear_clicked();
+        void on_pushButtonConnect_clicked(void);
+        void on_pushButtonDisconnect_clicked(void);
+        void on_pushButtonPlainText_clicked(void);
+        void on_pushButtonCipherText_clicked(void);
+        void on_pushButtonClear_clicked(void);
 
     protected:
 
@@ -57,6 +57,8 @@ class Widget : public QWidget
         TCPSocketClient* client_sock;
         GDOCP protocolManager;
         RandomPrimeGenerator primeGenerator;
+
+        bool _serverSuspended;
 };
 
 #endif /* __WIDGET_HPP__ */
