@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <iterator>
 
-#define DEFAULT_FIELD_DELIMITER "$"
-#define DEFAULT_END_DELIMITER   "#"
+#define DEFAULT_DOCSAP_FIELD_DELIMITER "$"
+#define DEFAULT_DOCSAP_END_DELIMITER   "#"
 
 class DOCSAP
 {
@@ -29,8 +29,8 @@ class DOCSAP
         };
 
         explicit DOCSAP(
-                const std::string& fieldDelimiter = DEFAULT_FIELD_DELIMITER,
-                const std::string& endDelimiter = DEFAULT_END_DELIMITER);
+             const std::string& fieldDelimiter = DEFAULT_DOCSAP_FIELD_DELIMITER,
+             const std::string& endDelimiter = DEFAULT_DOCSAP_END_DELIMITER);
         DOCSAP(DOCSAP const& other);
 
         int parseQuery(const std::string& query);
