@@ -92,6 +92,11 @@ bool Socket::setBlockingEnable(bool enable)
 #endif /* Detect operating system */
 }
 
+std::string Socket::getIPv4(void) const
+{
+    return inet_ntoa(this->_addr.sin_addr);
+}
+
 bool Socket::shutdown(int how)
 {
     // More control over how the socket closes

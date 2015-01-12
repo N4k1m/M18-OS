@@ -72,6 +72,8 @@ class Socket
         SOCKET socketDescriptor(void) const;
         bool isValid(void) const;
         bool setBlockingEnable(bool enable);
+
+        std::string getIPv4(void) const;
     
         bool shutdown(int how);
         bool close(void);
