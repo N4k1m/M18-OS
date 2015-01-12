@@ -47,4 +47,5 @@ SOURCES += main.cpp MainWindow.cpp \
 
 DISTFILES += \
     server_documents.conf \
-    users.conf
+    users.conf \
+    admin.conf
