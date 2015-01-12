@@ -30,15 +30,19 @@ class MainWindow : public QWidget
 
     private slots:
 
+        // General slots
         void setWidgetsEnable(bool serverRunning);
         void showStatus(void);
         void displayMessage(const QString& msg);
         void updateClientsCount(int clientsCount);
 
+        // Thread admin signals management
         void administratorConnected(const QString& adminLogin);
         void administratorDisconnected(void);
         void setServerSuspended(bool suspended);
+        void shutdownServer(void);
 
+        // Thread client and thread admin state management
         void threadServerStarted(void);
         void threadServerFinished(void);
         void threadAdminStarted(void);

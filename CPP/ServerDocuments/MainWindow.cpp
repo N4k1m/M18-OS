@@ -84,6 +84,12 @@ void MainWindow::setServerSuspended(bool suspended)
     this->showStatus();
 }
 
+void MainWindow::shutdownServer(void)
+{
+    this->stopServer();
+    this->showStatus();
+}
+
 void MainWindow::threadServerStarted(void)
 {
     this->_threadServerStarted = true;
@@ -181,6 +187,8 @@ void MainWindow::on_pushButtonStart_clicked(void)
             this, SLOT(threadAdminStarted()));
     connect(this->_threadAdmin, SIGNAL(finished()),
             this, SLOT(threadAdminFinished()));
+    connect(this->_threadAdmin, SIGNAL(shutdownServer()),
+            this, SLOT(shutdownServer()));
 
     // Connect thread admin to thread server
     connect(this->_threadAdmin, SIGNAL(suspendServer(bool)),

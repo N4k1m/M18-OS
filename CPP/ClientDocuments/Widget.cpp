@@ -2,13 +2,8 @@
 #include "ui_Widget.h"
 
 Widget::Widget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::Widget),
-    _threadAdmin(NULL),
-    _clientSocket(NULL),
-    protocolManager(),
-    primeGenerator(),
-    _serverSuspended(false)
+    QWidget(parent), ui(new Ui::Widget), _threadAdmin(NULL), _clientSocket(NULL),
+    protocolManager(), primeGenerator(), _serverSuspended(false)
 
 {
     this->ui->setupUi(this);
@@ -127,6 +122,18 @@ void Widget::serverSuspended(bool suspended)
     this->showStatus();
 }
 
+void Widget::serverWillShutdwon(int delay)
+{
+    QMessageBox::warning(this, "Server will shutdown", "Server shutdown in " +
+                         QString::number(delay) + " second(s)");
+}
+
+void Widget::serverShutdown(void)
+{
+    this->closeConnection();
+    this->showStatus();
+}
+
 void Widget::on_pushButtonConnect_clicked(void)
 {
     // Some checks
@@ -184,6 +191,10 @@ void Widget::on_pushButtonConnect_clicked(void)
                 this, SLOT(threadAdminFinished()));
         connect(this->_threadAdmin, SIGNAL(serverSuspended(bool)),
                 this, SLOT(serverSuspended(bool)));
+        connect(this->_threadAdmin, SIGNAL(serverShutdown(int)),
+                this, SLOT(serverWillShutdwon(int)));
+        connect(this->_threadAdmin, SIGNAL(serverShutdownNow()),
+                this, SLOT(serverShutdown()));
 
         this->_threadAdmin->start();
 
@@ -467,7 +478,7 @@ void Widget::loginProcedure(void) // Throws SocketException and Exception
 
 void Widget::closeConnection(void)
 {
-    // Stop thread client
+    // Stop thread admin
     if (this->_threadAdmin != NULL && this->_threadAdmin->isRunning())
     {
         this->_threadAdmin->requestStop();

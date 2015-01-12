@@ -1,14 +1,9 @@
 #include "ThreadAdmin.hpp"
 
 ThreadAdmin::ThreadAdmin(int port, QObject* parent) :
-    QThread(parent),
-    _port(port),
-    _portAdminClient(DEFAULT_PORT_ADMIN_CLIENT),
-    _serverSocket(NULL),
-    _clientSocket(NULL),
-    _protocolManager(),
-    _clientLoggedIn(false),
-    _stopRequested(false)
+    QThread(parent), _port(port), _portAdminClient(DEFAULT_PORT_ADMIN_CLIENT),
+    _serverSocket(NULL), _clientSocket(NULL), _timer(NULL), _protocolManager(),
+    _clientLoggedIn(false), _stopRequested(false)
 {
     IniParser parser("server_documents.conf");
 
@@ -22,10 +17,18 @@ ThreadAdmin::ThreadAdmin(int port, QObject* parent) :
     if (parser.keyExists("client_admin_port"))
         this->_portAdminClient = std::stoi(parser.value("client_admin_port"));
 
+    // Create a single shot timer
+    this->_timer = new QTimer;
+    this->_timer->moveToThread(this);
+    connect(this->_timer, SIGNAL(timeout()),
+            this, SLOT(manageSHUTDOWN_NOW()), Qt::DirectConnection);
 }
 
 ThreadAdmin::~ThreadAdmin(void)
 {
+    delete this->_timer;
+    this->_timer = NULL;
+
     delete this->_clientSocket;
     this->_clientSocket = NULL;
 
@@ -45,6 +48,18 @@ void ThreadAdmin::requestStop(void)
     // Or interrupt server blocking function
     if (this->_serverSocket != NULL && this->_serverSocket->isValid())
         this->_serverSocket->close();
+}
+
+void ThreadAdmin::manageSHUTDOWN_NOW(void)
+{
+    // Create query PAUSE
+    AGDOCProtocol query;
+    query.command = AGDOCProtocol::SHUTDOWN_NOW;
+
+    // Inform all clients
+    this->informAllClients(query);
+
+    emit shutdownServer();
 }
 
 void ThreadAdmin::run(void)
@@ -125,6 +140,9 @@ void ThreadAdmin::run(void)
                         break;
                     case DOCSAP::RESUME:
                         this->manageRESUME();
+                        break;
+                    case DOCSAP::STOP:
+                        this->manageSTOP();
                         break;
                     case DOCSAP::QUIT:
                         this->manageQUIT();
@@ -233,6 +251,39 @@ void ThreadAdmin::manageRESUME(void)
 
     // Inform all clients
     this->informAllClients(query);
+}
+
+void ThreadAdmin::manageSTOP(void)
+{
+    try
+    {
+        // Check if timer has already started
+        if (this->_timer->isActive())
+            throw Exception("Shutdown already in progress");
+
+        // Check if delay exists
+        if (this->_protocolManager.getArgCount() < 1)
+            throw Exception("Delay is missing");
+
+        // Get delay
+        int delay = std::stoi(this->_protocolManager.getArg(0));
+        emit message("[ADMIN] Server shutdown in " + QString::number(delay) + " second(s)");
+
+        // Create query STOP
+        AGDOCProtocol query;
+        query.command = AGDOCProtocol::STOP;
+        query.content.stop.delay = delay;
+
+        // Inform all clients
+        this->informAllClients(query);
+
+        // Start timer
+        this->_timer->start(delay * 1000);
+    }
+    catch(const Exception& exception)
+    {
+        this->sendFAILMessage(exception.what());
+    }
 }
 
 void ThreadAdmin::manageQUIT(void)

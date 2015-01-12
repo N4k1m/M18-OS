@@ -4,6 +4,7 @@
 #include <QThread>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QTimer>
 
 // Networking
 #include "../Utils/Sockets/TCPSocketClient.hpp"
@@ -35,12 +36,17 @@ class ThreadAdmin : public QThread
 
         void requestStop(void);
 
+    public slots:
+
+        void manageSHUTDOWN_NOW(void);
+
     signals:
 
         void message(const QString& message);
-        void suspendServer(bool);
         void administratorAccepted(const QString& adminLogin);
         void administratorDisconnected(void);
+        void suspendServer(bool suspend);
+        void shutdownServer(void);
 
     protected:
 
@@ -52,17 +58,12 @@ class ThreadAdmin : public QThread
         void manageLCLIENTS(void);
         void managePAUSE(void);
         void manageRESUME(void);
+        void manageSTOP(void);
         void manageQUIT(void);
         void manageFAIL(void);
 
         void sendFAILMessage(QString const& cause);
         void informAllClients(const AGDOCProtocol& request);
-
-        // TODO à voir si j'utilise
-
-//        void manageSTOP(void);
-//        void manageACK(void);
-//        void manageUNKNOWN(void);
 
         bool stopRequested(void);
 
@@ -72,6 +73,8 @@ class ThreadAdmin : public QThread
         int _portAdminClient;
         TCPSocketServer* _serverSocket;
         TCPSocketClient* _clientSocket;
+
+        QTimer* _timer;
 
         DOCSAP _protocolManager;
 

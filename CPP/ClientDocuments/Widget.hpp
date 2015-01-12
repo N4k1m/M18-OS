@@ -45,6 +45,8 @@ class Widget : public QWidget
         void threadAdminStarted(void);
         void threadAdminFinished(void);
         void serverSuspended(bool suspended);
+        void serverWillShutdwon(int delay);
+        void serverShutdown(void);
 
         // Auto-connect
         void on_pushButtonConnect_clicked(void);
