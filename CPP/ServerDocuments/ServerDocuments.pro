@@ -27,7 +27,8 @@ HEADERS += MainWindow.hpp \
     ThreadServer.hpp \
     ThreadServerPool.hpp \
     ThreadClient.hpp \
-    ThreadAdmin.hpp
+    ThreadAdmin.hpp \
+    ../Utils/DOCSAP/DOCSAP.hpp
 FORMS += MainWindow.ui
 SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Sockets/Socket.cpp \
@@ -43,7 +44,8 @@ SOURCES += main.cpp MainWindow.cpp \
     ThreadServer.cpp \
     ThreadServerPool.cpp \
     ThreadClient.cpp \
-    ThreadAdmin.cpp
+    ThreadAdmin.cpp \
+    ../Utils/DOCSAP/DOCSAP.cpp
 
 DISTFILES += \
     server_documents.conf \
