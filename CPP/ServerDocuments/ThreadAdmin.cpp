@@ -106,6 +106,9 @@ void ThreadAdmin::run(void)
                     case DOCSAP::LOGINA:
                         this->manageLOGINA();
                         break;
+                    case DOCSAP::LCLIENTS:
+                        this->manageLCLIENTS();
+                        break;
                     case DOCSAP::QUIT:
                         this->manageQUIT();
                         break;
@@ -129,6 +132,7 @@ void ThreadAdmin::run(void)
         delete this->_clientSocket;
         this->_clientSocket = NULL;
         this->_clientLoggedIn = false;
+        this->_protocolManager.setCommand(DOCSAP::UNKNOWN);
         emit message("[ADMIN] Client disconnected");
     }
 }
@@ -163,8 +167,29 @@ void ThreadAdmin::manageLOGINA(void)
     catch(Exception const& exception)
     {
         this->sendFAILMessage(exception.what());
-        emit message("[ADMIN] " + QString::fromStdString(exception.what()));
     }
+}
+
+void ThreadAdmin::manageLCLIENTS(void)
+{
+    // Check if administrator is logged in
+    if (!this->_clientLoggedIn)
+    {
+        this->sendFAILMessage("Unable to list clients. You must be logged in");
+        return;
+    }
+
+    // Administrator is logged in
+    this->_protocolManager.setNewCommand(DOCSAP::ACK);
+
+    // Get all client's IPv4
+    conditionMutex.lock();
+    for (int i(0); i < clients.size(); ++i)
+        this->_protocolManager.addArg(clients.at(i)->getIPv4());
+    conditionMutex.unlock();
+
+    // Send reply
+    this->_clientSocket->send(this->_protocolManager.generateQuery());
 }
 
 void ThreadAdmin::manageQUIT(void)
@@ -184,6 +209,7 @@ void ThreadAdmin::sendFAILMessage(const QString& cause)
     this->_protocolManager.setNewCommand(DOCSAP::FAIL);
     this->_protocolManager.addArg(cause.toStdString());
     this->_clientSocket->send(this->_protocolManager.generateQuery());
+    emit message("[ADMIN] " + cause);
 }
 
 bool ThreadAdmin::stopRequested(void)

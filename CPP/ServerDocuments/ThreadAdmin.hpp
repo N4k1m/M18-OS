@@ -45,13 +45,13 @@ class ThreadAdmin : public QThread
     private:
 
         void manageLOGINA(void);
+        void manageLCLIENTS(void);
         void manageQUIT(void);
         void manageFAIL(void);
 
         void sendFAILMessage(QString const& cause);
 
         // TODO à voir si j'utilise
-//        void manageLCLIENTS(void);
 //        void managePAUSE(void);
 //        void manageRESUME(void);
 //        void manageSTOP(void);
