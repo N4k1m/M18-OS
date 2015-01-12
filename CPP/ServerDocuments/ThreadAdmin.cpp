@@ -227,6 +227,13 @@ void ThreadAdmin::manageLCLIENTS(void)
 
 void ThreadAdmin::managePAUSE(void)
 {
+    // Check if administrator is logged in
+    if (!this->_clientLoggedIn)
+    {
+        this->sendFAILMessage("Unable to suspend server. You must be logged in");
+        return;
+    }
+
     // Emit a signal to GUI and thread server
     emit suspendServer(true);
 
@@ -240,6 +247,13 @@ void ThreadAdmin::managePAUSE(void)
 
 void ThreadAdmin::manageRESUME(void)
 {
+    // Check if administrator is logged in
+    if (!this->_clientLoggedIn)
+    {
+        this->sendFAILMessage("Unable to resume server. You must be logged in");
+        return;
+    }
+
     // Emit a signal to GUI and thread server
     emit suspendServer(false);
 
@@ -255,6 +269,10 @@ void ThreadAdmin::manageSTOP(void)
 {
     try
     {
+        // Check if administrator is logged in
+        if (!this->_clientLoggedIn)
+            throw Exception("Unable to stop server. You must be logged in");
+
         // Check if timer has already started
         if (this->_timer->isRunning())
             throw Exception("Shutdown already in progress");
