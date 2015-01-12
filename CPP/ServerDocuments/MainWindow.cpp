@@ -57,7 +57,7 @@ void MainWindow::displayMessage(const QString& msg)
 
 void MainWindow::updateClientsCount(int clientsCount)
 {
-    this->ui->spinBoxClientsCount->setValue(clientsCount);
+    this->ui->labelClientsCount->setText(QString::number(clientsCount));
 }
 
 void MainWindow::threadServerStarted(void)
