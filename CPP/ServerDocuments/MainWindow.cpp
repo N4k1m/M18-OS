@@ -154,6 +154,7 @@ void MainWindow::on_pushButtonStart_clicked(void)
 void MainWindow::setWidgetsEnable(bool serverRunning)
 {
     this->ui->spinBoxPort->setEnabled(!serverRunning);
+    this->ui->spinBoxPortAdmin->setEnabled(!serverRunning);
     this->ui->spinBoxThreadsPool->setEnabled(!serverRunning);
     this->ui->pushButtonStart->setEnabled(!serverRunning);
     this->ui->pushButtonStop->setEnabled(serverRunning);
