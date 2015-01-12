@@ -34,6 +34,9 @@ class MainWindow : public QWidget
         void displayMessage(const QString& msg);
         void updateClientsCount(int clientsCount);
 
+        void administratorConnected(const QString& adminLogin);
+        void administratorDisconnected(void);
+
         void threadServerStarted(void);
         void threadServerFinished(void);
 

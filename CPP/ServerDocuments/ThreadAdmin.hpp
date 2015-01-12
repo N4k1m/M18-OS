@@ -35,6 +35,8 @@ class ThreadAdmin : public QThread
     signals:
 
         void message(const QString& message);
+        void administratorAccepted(const QString& adminLogin);
+        void administratorDisconnected(void);
 
     protected:
 

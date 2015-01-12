@@ -158,6 +158,7 @@ void ThreadAdmin::manageLOGINA(void)
         this->_clientSocket->send(this->_protocolManager.generateQuery());
 
         emit message("[ADMIN] " + QString::fromStdString(logina) + " logged in");
+        emit administratorAccepted(QString::fromStdString(logina));
     }
     catch(Exception const& exception)
     {
@@ -169,8 +170,7 @@ void ThreadAdmin::manageLOGINA(void)
 void ThreadAdmin::manageQUIT(void)
 {
     emit message("[ADMIN] Administrator requested to quit");
-
-    // Nothing else to do ...
+    emit administratorDisconnected();
 }
 
 void ThreadAdmin::manageFAIL(void)

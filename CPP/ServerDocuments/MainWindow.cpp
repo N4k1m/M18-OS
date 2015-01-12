@@ -60,6 +60,18 @@ void MainWindow::updateClientsCount(int clientsCount)
     this->ui->labelClientsCount->setText(QString::number(clientsCount));
 }
 
+void MainWindow::administratorConnected(const QString& adminLogin)
+{
+    this->ui->labelAdminConnectedLogin->setStyleSheet("QLabel { color : green; }");
+    this->ui->labelAdminConnectedLogin->setText(adminLogin);
+}
+
+void MainWindow::administratorDisconnected(void)
+{
+    this->ui->labelAdminConnectedLogin->setStyleSheet("QLabel { color : red; }");
+    this->ui->labelAdminConnectedLogin->setText("No one");
+}
+
 void MainWindow::threadServerStarted(void)
 {
     this->_threadServerStarted = true;
@@ -143,6 +155,10 @@ void MainWindow::on_pushButtonStart_clicked(void)
 
     connect(this->_threadAdmin, SIGNAL(message(QString)),
             this, SLOT(displayMessage(QString)));
+    connect(this->_threadAdmin, SIGNAL(administratorAccepted(QString)),
+            this, SLOT(administratorConnected(QString)));
+    connect(this->_threadAdmin, SIGNAL(administratorDisconnected()),
+            this, SLOT(administratorDisconnected()));
     connect(this->_threadAdmin, SIGNAL(started()),
             this, SLOT(threadAdminStarted()));
     connect(this->_threadAdmin, SIGNAL(finished()),
