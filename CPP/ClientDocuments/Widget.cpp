@@ -212,7 +212,6 @@ void Widget::on_pushButtonPlainText_clicked()
         // Ask to close the connection if the exception code is set to 1
         if (ex.code() > 0)
         {
-            qDebug("on close la connexion");
             this->setWidgetsEnable(false);
             this->closeConnection();
         }

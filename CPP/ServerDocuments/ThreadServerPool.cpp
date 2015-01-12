@@ -6,9 +6,16 @@ QMutex conditionMutex;
 QList<TCPSocketClient*> clients;
 int clientAvailable = 0;
 
-ThreadServerPool::ThreadServerPool(int port, int threadsClientCount, QObject* parent)
-    : QThread(parent), _port(port), _threadsClientCount(threadsClientCount),
-      _socketServer(NULL), _socketClient(NULL), _stopRequested(false)
+ThreadServerPool::ThreadServerPool(int port,
+                                   int threadsClientCount,
+                                   QObject* parent)
+    : QThread(parent),
+      _port(port),
+      _threadsClientCount(threadsClientCount),
+      _suspended(false),
+      _socketServer(NULL),
+      _socketClient(NULL),
+      _stopRequested(false)
 {
     // Open and parse settings file
     IniParser parser("server_documents.conf");
@@ -85,6 +92,16 @@ void ThreadServerPool::requestStop(void)
     }
 }
 
+void ThreadServerPool::suspendServer(bool suspend)
+{
+    this->_suspended = suspend;
+
+    if (this->_suspended)
+        emit message("Thread client : server suspended");
+    else
+        emit message("Thread client : server resumed");
+}
+
 void ThreadServerPool::threadClientStarted(void)
 {
     emit message("Thread client : started");
@@ -149,6 +166,14 @@ void ThreadServerPool::run(void)
             continue;
         }
 
+        // Check if the server is suspended
+        if (this->_suspended)
+        {
+            emit message("Thread server : Client rejected. Serer is suspended");
+            this->sendFAILMessage("Server suspended");
+            continue;
+        }
+
         // Check if a thread is available for the newly connected client
         if (clients.count() >= this->_threadsClientCount)
         {
@@ -156,11 +181,6 @@ void ThreadServerPool::run(void)
 
             // Notify the client that connection is rejected
             this->sendFAILMessage("Connection failure server full");
-
-            // Free client socket
-            delete this->_socketClient;
-            this->_socketClient = NULL;
-            emit message("Thread server : client disconnected");
             continue;
         }
 
@@ -184,6 +204,11 @@ void ThreadServerPool::sendFAILMessage(const QString& cause)
     this->_protocolManager.setNewCommand(GDOCP::FAIL);
     this->_protocolManager.setHeaderValue("cause", cause.toStdString());
     this->_socketClient->send(this->_protocolManager.generateQuery());
+
+    // Free client socket
+    delete this->_socketClient;
+    this->_socketClient = NULL;
+    emit message("Thread server : client disconnected");
 }
 
 bool ThreadServerPool::stopRequested(void)

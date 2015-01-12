@@ -42,6 +42,7 @@ class ThreadServerPool : public QThread
     public slots:
 
         void requestStop(void);
+        void suspendServer(bool suspend);
 
     private slots:
 
@@ -69,6 +70,7 @@ class ThreadServerPool : public QThread
         int _port;
         int _threadsClientCount;
         QList<ThreadClient*> _threadsClient;
+        bool _suspended;
 
         TCPSocketServer* _socketServer;
         TCPSocketClient* _socketClient;

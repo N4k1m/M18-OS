@@ -137,6 +137,9 @@ void MainWindow::threadAdminFinished(void)
     delete this->_threadAdmin;
     this->_threadAdmin = NULL;
 
+    // Update administrator label
+    this->administratorDisconnected();
+
     this->displayMessage("Thread admin ended");
 }
 
@@ -165,6 +168,7 @@ void MainWindow::on_pushButtonStart_clicked(void)
     // Start thread admin
     this->_threadAdmin = new ThreadAdmin(this->ui->spinBoxPortAdmin->value(), 0);
 
+    // Connect thread admin to GUI
     connect(this->_threadAdmin, SIGNAL(message(QString)),
             this, SLOT(displayMessage(QString)));
     connect(this->_threadAdmin, SIGNAL(administratorAccepted(QString)),
@@ -177,6 +181,10 @@ void MainWindow::on_pushButtonStart_clicked(void)
             this, SLOT(threadAdminStarted()));
     connect(this->_threadAdmin, SIGNAL(finished()),
             this, SLOT(threadAdminFinished()));
+
+    // Connect thread admin to thread server
+    connect(this->_threadAdmin, SIGNAL(suspendServer(bool)),
+            this->_threadServeur, SLOT(suspendServer(bool)));
 
     this->_threadAdmin->start();
 }
