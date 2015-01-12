@@ -2,11 +2,15 @@
 
 ThreadAdmin::ThreadAdmin(int port, QObject* parent) :
     QThread(parent), _port(port), _serverSocket(NULL), _clientSocket(NULL),
-    _clientLoggedIn(false), _clientStop(false), _stopRequested(false)
+    _protocolManager(), _clientLoggedIn(false), _stopRequested(false)
 {
-    // TODO : récupérer les paramètres de délimiters
+    // Get DOCSAP delimiters
+    IniParser parser("server_documents.conf");
 
-    // TODO : ouvrir les users admin
+    if (parser.keyExists("DOCSAP_fieldDelimiter"))
+        this->_protocolManager.setFieldDelimiter(parser.value("DOCSAP_fieldDelimiter"));
+    if (parser.keyExists("DOCSAP_endDelimiter"))
+        this->_protocolManager.setEndDelimiter(parser.value("DOCSAP_endDelimiter"));
 }
 
 ThreadAdmin::~ThreadAdmin(void)
@@ -57,7 +61,6 @@ void ThreadAdmin::run(void)
         {
             emit message("[ADMIN] Waiting client");
             this->_clientSocket = this->_serverSocket->nextPendingConnection();
-            this->_clientStop = false;
             emit message("[ADMIN] Client connected");
         }
         catch(const SocketException& exception)
@@ -78,27 +81,40 @@ void ThreadAdmin::run(void)
         {
             std::string msg;
 
-            while(!this->_clientStop)
+            // While client don't ask to quit
+            while(!this->_protocolManager.is(DOCSAP::QUIT))
             {
-                ssize_t ret = this->_clientSocket->recv(msg, "#");
+                // Receive query
+                ssize_t ret = this->_clientSocket->recv(
+                                  msg, this->_protocolManager.endDelimiter());
 
                 // Client close the connection
                 if (ret == SOCKET_CLOSED)
-                    break;
-
-                emit message("[ADMIN] Receive query : " + QString::fromStdString(msg));
-
-                // TODO : créer un parser pour le protocole DOCSAP
-
-                if (msg == "QUIT#")
-                    this->_clientStop = true;
-                else
                 {
-                    std::string message = "ACK#";
-                    this->_clientSocket->send(message);
+                    emit message("[ADMIN] Admin close connection");
+                    break;
                 }
 
-                // TODO Switch case sur la commande de la requete
+                emit message("[ADMIN] Receive query : "
+                             + QString::fromStdString(msg));
+
+                // Create query object. FAIL query is created if msg is empty
+                this->_protocolManager.parseQuery(msg);
+
+                switch (this->_protocolManager.command())
+                {
+                    case DOCSAP::LOGINA:
+                        this->manageLOGINA();
+                        break;
+                    case DOCSAP::QUIT:
+                        this->manageQUIT();
+                        break;
+                    case DOCSAP::FAIL:
+                        this->manageFAIL();
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         catch(const SocketException& exception)
@@ -115,6 +131,59 @@ void ThreadAdmin::run(void)
         this->_clientLoggedIn = false;
         emit message("[ADMIN] Client disconnected");
     }
+}
+
+void ThreadAdmin::manageLOGINA(void)
+{
+    try
+    {
+        // Get all admin login - password
+        IniParser adminParser("DB/admin.conf");
+        std::string logina = this->_protocolManager.getArg(0);
+
+        // Check if administrator exists
+        if (!adminParser.keyExists(logina))
+            throw Exception("Administrator " + logina + " not allowed");
+
+        std::string passworda = this->_protocolManager.getArg(1);
+        std::string password  = adminParser.value(logina);
+
+        // Accept or not the client
+        if (passworda != password)
+            throw Exception("Invalid password");
+
+        // Adminitrator logged in
+        this->_clientLoggedIn = true;
+        this->_protocolManager.setNewCommand(DOCSAP::ACK);
+        this->_clientSocket->send(this->_protocolManager.generateQuery());
+
+        emit message("[ADMIN] " + QString::fromStdString(logina) + " logged in");
+    }
+    catch(Exception const& exception)
+    {
+        this->sendFAILMessage(exception.what());
+        emit message("[ADMIN] " + QString::fromStdString(exception.what()));
+    }
+}
+
+void ThreadAdmin::manageQUIT(void)
+{
+    emit message("[ADMIN] Administrator requested to quit");
+
+    // Nothing else to do ...
+}
+
+void ThreadAdmin::manageFAIL(void)
+{
+    // Fail query is created if no data are received --> disconnect the admin
+    this->_protocolManager.setCommand(DOCSAP::QUIT);
+}
+
+void ThreadAdmin::sendFAILMessage(const QString& cause)
+{
+    this->_protocolManager.setNewCommand(DOCSAP::FAIL);
+    this->_protocolManager.addArg(cause.toStdString());
+    this->_clientSocket->send(this->_protocolManager.generateQuery());
 }
 
 bool ThreadAdmin::stopRequested(void)

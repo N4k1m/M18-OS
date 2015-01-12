@@ -9,6 +9,9 @@
 #include "../Utils/Sockets/TCPSocketClient.hpp"
 #include "../Utils/Sockets/TCPSocketServer.hpp"
 
+// Protocol
+#include "../Utils/DOCSAP/DOCSAP.hpp"
+
 // Parser
 #include "../Utils/Parser/IniParser.hpp"
 
@@ -39,6 +42,20 @@ class ThreadAdmin : public QThread
 
     private:
 
+        void manageLOGINA(void);
+        void manageQUIT(void);
+        void manageFAIL(void);
+
+        void sendFAILMessage(QString const& cause);
+
+        // TODO à voir si j'utilise
+//        void manageLCLIENTS(void);
+//        void managePAUSE(void);
+//        void manageRESUME(void);
+//        void manageSTOP(void);
+//        void manageACK(void);
+//        void manageUNKNOWN(void);
+
         bool stopRequested(void);
 
     private:
@@ -47,8 +64,9 @@ class ThreadAdmin : public QThread
         TCPSocketServer* _serverSocket;
         TCPSocketClient* _clientSocket;
 
+        DOCSAP _protocolManager;
+
         bool _clientLoggedIn;
-        bool _clientStop;
 
         QMutex _mutex;
         bool _stopRequested; // Protected by _mutex
