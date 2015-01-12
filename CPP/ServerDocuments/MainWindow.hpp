@@ -31,6 +31,7 @@ class MainWindow : public QWidget
     private slots:
 
         void setWidgetsEnable(bool serverRunning);
+        void showStatus(void);
         void displayMessage(const QString& msg);
         void updateClientsCount(int clientsCount);
 
@@ -56,6 +57,8 @@ class MainWindow : public QWidget
 
         bool _threadServerStarted;
         bool _threadAdminStarted;
+
+        bool _serverSuspended;
 };
 
 #endif /* __MAINWINDOW_HPP__ */

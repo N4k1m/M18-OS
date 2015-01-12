@@ -3,7 +3,8 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QWidget(parent), ui(new Ui::MainWindow), _threadServeur(NULL),
-    _threadAdmin(NULL), _threadServerStarted(false), _threadAdminStarted(false)
+    _threadAdmin(NULL), _threadServerStarted(false), _threadAdminStarted(false),
+    _serverSuspended(false)
 {
     ui->setupUi(this);
 
@@ -23,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(this->ui->pushButtonClear, SIGNAL(clicked()),
             this->ui->plainTextEditConsole, SLOT(clear()));
+
+    this->showStatus();
 }
 
 MainWindow::~MainWindow(void)
@@ -76,9 +79,9 @@ void MainWindow::threadServerStarted(void)
 {
     this->_threadServerStarted = true;
 
-    // Enable widgets if both threads have started
+    // Update status if both threads have started
     if (this->_threadServerStarted && this->_threadAdminStarted)
-        this->setWidgetsEnable(true);
+        this->showStatus();
 
     // Display message
     this->displayMessage("Thread server started on port " +
@@ -89,9 +92,9 @@ void MainWindow::threadServerFinished(void)
 {
     this->_threadServerStarted = false;
 
-    // Desable widgets if both threads have finished
+    // Update status if both threads have started
     if (!this->_threadServerStarted && !this->_threadAdminStarted)
-        this->setWidgetsEnable(false);
+        this->showStatus();
 
     // Suppression du thread
     delete this->_threadServeur;
@@ -106,7 +109,7 @@ void MainWindow::threadAdminStarted(void)
 
     // Enable widgets if both threads have started
     if (this->_threadServerStarted && this->_threadAdminStarted)
-        this->setWidgetsEnable(true);
+        this->showStatus();
 
     // Display message
     this->displayMessage("Thread admin started on port " +
@@ -119,7 +122,7 @@ void MainWindow::threadAdminFinished(void)
 
     // Desable widgets if both threads have finished
     if (!this->_threadServerStarted && !this->_threadAdminStarted)
-        this->setWidgetsEnable(false);
+        this->showStatus();
 
     // Suppression du thread
     delete this->_threadAdmin;
@@ -175,6 +178,32 @@ void MainWindow::setWidgetsEnable(bool serverRunning)
     this->ui->pushButtonStart->setEnabled(!serverRunning);
     this->ui->pushButtonStop->setEnabled(serverRunning);
     this->ui->plainTextEditConsole->setEnabled(serverRunning);
+}
+
+void MainWindow::showStatus(void)
+{
+    bool isRunning = this->_threadAdminStarted && this->_threadServerStarted;
+
+    this->setWidgetsEnable(isRunning);
+
+    if (isRunning)
+    {
+        if (this->_serverSuspended)
+        {
+            this->ui->labelStatus->setStyleSheet("QLabel { color : orange; }");
+            this->ui->labelStatus->setText("Server suspended");
+        }
+        else
+        {
+            this->ui->labelStatus->setStyleSheet("QLabel { color : green; }");
+            this->ui->labelStatus->setText("Server is running");
+        }
+    }
+    else
+    {
+        this->ui->labelStatus->setStyleSheet("QLabel { color : red; }");
+        this->ui->labelStatus->setText("Server stopped");
+    }
 }
 
 void MainWindow::on_pushButtonStop_clicked(void)
