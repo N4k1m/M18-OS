@@ -35,6 +35,7 @@ class ThreadAdmin : public QThread
     signals:
 
         void message(const QString& message);
+        void suspendServer(bool);
         void administratorAccepted(const QString& adminLogin);
         void administratorDisconnected(void);
 
@@ -46,14 +47,15 @@ class ThreadAdmin : public QThread
 
         void manageLOGINA(void);
         void manageLCLIENTS(void);
+        void managePAUSE(void);
+        void manageRESUME(void);
         void manageQUIT(void);
         void manageFAIL(void);
 
         void sendFAILMessage(QString const& cause);
 
         // TODO à voir si j'utilise
-//        void managePAUSE(void);
-//        void manageRESUME(void);
+
 //        void manageSTOP(void);
 //        void manageACK(void);
 //        void manageUNKNOWN(void);

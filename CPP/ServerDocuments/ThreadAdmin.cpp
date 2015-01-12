@@ -109,6 +109,12 @@ void ThreadAdmin::run(void)
                     case DOCSAP::LCLIENTS:
                         this->manageLCLIENTS();
                         break;
+                    case DOCSAP::PAUSE:
+                        this->managePAUSE();
+                        break;
+                    case DOCSAP::RESUME:
+                        this->manageRESUME();
+                        break;
                     case DOCSAP::QUIT:
                         this->manageQUIT();
                         break;
@@ -189,6 +195,28 @@ void ThreadAdmin::manageLCLIENTS(void)
     conditionMutex.unlock();
 
     // Send reply
+    this->_clientSocket->send(this->_protocolManager.generateQuery());
+}
+
+void ThreadAdmin::managePAUSE(void)
+{
+    emit suspendServer(true);
+
+    // TODO : se connecter chez chaque client en envoyer pause
+
+    // Send ACK
+    this->_protocolManager.setNewCommand(DOCSAP::ACK);
+    this->_clientSocket->send(this->_protocolManager.generateQuery());
+}
+
+void ThreadAdmin::manageRESUME(void)
+{
+    emit suspendServer(false);
+
+    // TODO : se connecter chez chaque client en envoyer RESUME
+
+    // Send ACK
+    this->_protocolManager.setNewCommand(DOCSAP::ACK);
     this->_clientSocket->send(this->_protocolManager.generateQuery());
 }
 

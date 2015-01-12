@@ -37,10 +37,10 @@ class MainWindow : public QWidget
 
         void administratorConnected(const QString& adminLogin);
         void administratorDisconnected(void);
+        void setServerSuspended(bool suspended);
 
         void threadServerStarted(void);
         void threadServerFinished(void);
-
         void threadAdminStarted(void);
         void threadAdminFinished(void);
 

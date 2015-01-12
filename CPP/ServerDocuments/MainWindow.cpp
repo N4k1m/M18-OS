@@ -75,6 +75,15 @@ void MainWindow::administratorDisconnected(void)
     this->ui->labelAdminConnectedLogin->setText("No one");
 }
 
+void MainWindow::setServerSuspended(bool suspended)
+{
+    // Change suspended state
+    this->_serverSuspended = suspended;
+
+    // Update label and widgets
+    this->showStatus();
+}
+
 void MainWindow::threadServerStarted(void)
 {
     this->_threadServerStarted = true;
@@ -162,6 +171,8 @@ void MainWindow::on_pushButtonStart_clicked(void)
             this, SLOT(administratorConnected(QString)));
     connect(this->_threadAdmin, SIGNAL(administratorDisconnected()),
             this, SLOT(administratorDisconnected()));
+    connect(this->_threadAdmin, SIGNAL(suspendServer(bool)),
+            this, SLOT(setServerSuspended(bool)));
     connect(this->_threadAdmin, SIGNAL(started()),
             this, SLOT(threadAdminStarted()));
     connect(this->_threadAdmin, SIGNAL(finished()),
