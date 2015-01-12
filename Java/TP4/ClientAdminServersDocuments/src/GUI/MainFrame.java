@@ -625,7 +625,10 @@ public class MainFrame extends javax.swing.JFrame
 
             // If server closed the connection
             if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+            {
+                this.disconnectFromServer();
                 throw new Exception("Disconnected from server");
+            }
 
             // If PAUSE failed
             if (reply.is(DOCSAPRequest.FAIL))
@@ -657,7 +660,10 @@ public class MainFrame extends javax.swing.JFrame
 
             // If server closed the connection
             if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+            {
+                this.disconnectFromServer();
                 throw new Exception("Disconnected from server");
+            }
 
             // If RESUME failed
             if (reply.is(DOCSAPRequest.FAIL))
@@ -707,7 +713,10 @@ public class MainFrame extends javax.swing.JFrame
 
             // If server closed the connection
             if (reply.is(DOCSAPRequest.NO_COMMAND) || reply.is(DOCSAPRequest.SOCK_ERROR))
+            {
+                this.disconnectFromServer();
                 throw new Exception("Disconnected from server");
+            }
 
             // If STOP failed
             if (reply.is(DOCSAPRequest.FAIL))
