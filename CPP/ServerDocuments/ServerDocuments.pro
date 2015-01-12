@@ -28,7 +28,8 @@ HEADERS += MainWindow.hpp \
     ThreadServerPool.hpp \
     ThreadClient.hpp \
     ThreadAdmin.hpp \
-    ../Utils/DOCSAP/DOCSAP.hpp
+    ../Utils/DOCSAP/DOCSAP.hpp \
+    ../Utils/Timers/QTimerOneShot.hpp
 FORMS += MainWindow.ui
 SOURCES += main.cpp MainWindow.cpp \
     ../Utils/Sockets/Socket.cpp \
@@ -45,7 +46,8 @@ SOURCES += main.cpp MainWindow.cpp \
     ThreadServerPool.cpp \
     ThreadClient.cpp \
     ThreadAdmin.cpp \
-    ../Utils/DOCSAP/DOCSAP.cpp
+    ../Utils/DOCSAP/DOCSAP.cpp \
+    ../Utils/Timers/QTimerOneShot.cpp
 
 DISTFILES += \
     server_documents.conf \

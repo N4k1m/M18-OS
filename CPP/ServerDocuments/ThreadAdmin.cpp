@@ -18,10 +18,8 @@ ThreadAdmin::ThreadAdmin(int port, QObject* parent) :
         this->_portAdminClient = std::stoi(parser.value("client_admin_port"));
 
     // Create a single shot timer
-    this->_timer = new QTimer;
-    this->_timer->moveToThread(this);
-    connect(this->_timer, SIGNAL(timeout()),
-            this, SLOT(manageSHUTDOWN_NOW()), Qt::DirectConnection);
+    this->_timer = new QTimerOneShot(this);
+    connect(this->_timer, SIGNAL(timeout()), this, SLOT(manageSHUTDOWN_NOW()));
 }
 
 ThreadAdmin::~ThreadAdmin(void)
@@ -258,7 +256,7 @@ void ThreadAdmin::manageSTOP(void)
     try
     {
         // Check if timer has already started
-        if (this->_timer->isActive())
+        if (this->_timer->isRunning())
             throw Exception("Shutdown already in progress");
 
         // Check if delay exists
@@ -278,7 +276,8 @@ void ThreadAdmin::manageSTOP(void)
         this->informAllClients(query);
 
         // Start timer
-        this->_timer->start(delay * 1000);
+        this->_timer->setInterval(delay);
+        this->_timer->start();
     }
     catch(const Exception& exception)
     {

@@ -4,7 +4,6 @@
 #include <QThread>
 #include <QMutex>
 #include <QMutexLocker>
-#include <QTimer>
 
 // Networking
 #include "../Utils/Sockets/TCPSocketClient.hpp"
@@ -16,6 +15,9 @@
 
 // Parser
 #include "../Utils/Parser/IniParser.hpp"
+
+// Timer
+#include "../Utils/Timers/QTimerOneShot.hpp"
 
 #define DEFAULT_PORT_ADMIN_CLIENT 8001
 
@@ -74,7 +76,7 @@ class ThreadAdmin : public QThread
         TCPSocketServer* _serverSocket;
         TCPSocketClient* _clientSocket;
 
-        QTimer* _timer;
+        QTimerOneShot* _timer;
 
         DOCSAP _protocolManager;
 
