@@ -41,11 +41,17 @@ void ThreadAdmin::requestStop(void)
 
     // Interrupt client blocking function
     if (this->_clientSocket != NULL && this->_clientSocket->isValid())
-        this->_clientSocket->close();
+    {
+        delete this->_clientSocket; // Shutdown and close
+        this->_clientSocket = NULL;
+    }
 
     // Or interrupt server blocking function
     if (this->_serverSocket != NULL && this->_serverSocket->isValid())
-        this->_serverSocket->close();
+    {
+        delete this->_serverSocket; // Shutdown and close
+        this->_serverSocket = NULL;
+    }
 }
 
 void ThreadAdmin::manageSHUTDOWN_NOW(void)
